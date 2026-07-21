@@ -1,0 +1,56 @@
+@page "/followups/details/{id:int}"
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Follow-Up Details</h1>
+
+@if (followUp is null)
+{
+    <p>Follow-up not found.</p>
+    <a class="btn-secondary" href="/followups">Back to Follow-Ups</a>
+}
+else
+{
+    <div class="card">
+        <h2>@followUp.FollowUpItemTitle</h2>
+
+        <p><strong>Meeting Date:</strong> @followUp.MeetingDate.ToShortDateString()</p>
+        <p><strong>Assigned Leader:</strong> @followUp.AssignedLeader</p>
+        <p><strong>Related Family:</strong> @followUp.RelatedFamily</p>
+        <p><strong>Due Date:</strong> @followUp.DueDate.ToShortDateString()</p>
+        <p><strong>Status:</strong> @followUp.Status</p>
+        <p><strong>Private:</strong> @(followUp.PrivacyFlag ? "Yes" : "No")</p>
+        <p><strong>Completion Notes:</strong> @followUp.CompletionNotes</p>
+    </div>
+
+    <div class="button-row">
+        <a class="btn-edit" href="/followups/edit/@followUp.Id">Edit</a>
+        <a class="btn-secondary" href="/followups">Back to Follow-Ups</a>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private FollowUpItem? followUp;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var isAdmin = authState.User.IsInRole("Admin");
+
+        var selectedFollowUp = await Service.GetFollowUpByIdAsync(Id);
+
+        if (selectedFollowUp is null || selectedFollowUp.PrivacyFlag && !isAdmin)
+        {
+            followUp = null;
+            return;
+        }
+
+        followUp = selectedFollowUp;
+    }
+}

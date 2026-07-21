@@ -1,0 +1,441 @@
+@page "/members"
+@rendermode InteractiveServer
+@inject WorkSyncService Service
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@attribute [Authorize(Roles = "Admin,Leader,Viewer")]
+
+<PageTitle>Members | WorkSync</PageTitle>
+
+<h1>Member Directory</h1>
+
+@if (showForm && canManageMembers)
+{
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3>@(isEditing ? "Edit Member" : "Create Member")</h3>
+
+        <EditForm Model="currentMember" FormName="member-form" OnSubmit="SaveMember">
+            @if (validationErrors.Any())
+            {
+                <div class="validation-summary-errors" role="alert">
+                    <ul>
+                        @foreach (var error in validationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label class="form-label" for="first-name">First Name</label>
+                    <input id="first-name" @bind="currentMember.FirstName" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="last-name">Last Name</label>
+                    <input id="last-name" @bind="currentMember.LastName" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="email">Email</label>
+                    <input id="email" @bind="currentMember.Email" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="phone">Phone</label>
+                    <input id="phone" @bind="currentMember.Phone" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="organization">Organization</label>
+                    <input id="organization" @bind="currentMember.Organization" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="current-calling">Current Calling</label>
+                    <input id="current-calling" @bind="currentMember.CurrentCalling" @bind:event="oninput" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="availability-notes">Availability Notes</label>
+                    <textarea id="availability-notes" @bind="currentMember.AvailabilityNotes" @bind:event="oninput" rows="3"></textarea>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label checkbox-label">
+                        <InputCheckbox @bind-Value="currentMember.ActiveStatus" />
+                        Active Status
+                    </label>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button type="submit" class="btn-primary">@(isEditing ? "Update Member" : "+ Add Member")</button>
+                <button type="button" class="btn-secondary" @onclick="CancelForm">Cancel</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@if (canManageMembers)
+{
+    <div class="button-row">
+        <button type="button" class="btn-primary" @onclick="ShowCreateForm">+ Add Member</button>
+        <button type="button" class="btn-secondary" @onclick="LoadMembers">Refresh</button>
+    </div>
+}
+
+<div class="filter-row">
+    <div class="search-box">
+        <label class="visually-hidden" for="member-search">Search members</label>
+        <span class="search-icon">🔍</span>
+        <InputText id="member-search"
+                   @bind-Value="searchText"
+                   placeholder="Search members..." />
+    </div>
+
+    @if (canManageMembers)
+    {
+        @* Status is private, so this filter is only rendered for managing roles. *@
+        <label class="visually-hidden" for="member-status-filter">Filter members by status</label>
+        <InputSelect id="member-status-filter" @bind-Value="activeStatusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+        </InputSelect>
+    }
+</div>
+
+@if (FilteredMembers.Any())
+{
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Organization</th>
+                    <th>Current Calling</th>
+                    <th>Availability Notes</th>
+                    @if (canManageMembers)
+                    {
+                        <th>Status</th>
+                    }
+                    @if (canManageMembers)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var member in FilteredMembers)
+                {
+                    <tr>
+                        <td>@member.FullName</td>
+                        <td>@member.Email</td>
+                        <td>@member.Phone</td>
+                        <td>@member.Organization</td>
+                        <td>@member.CurrentCalling</td>
+                        <td>@member.AvailabilityNotes</td>
+                        @if (canManageMembers)
+                        {
+                            <td>
+                                <span class="ws-badge @(member.ActiveStatus ? "badge-active" : "badge-inactive")">
+                                    @(member.ActiveStatus ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                        }
+                        @if (canManageMembers)
+                        {
+                            <td>
+                                <button type="button" class="btn-edit" @onclick="() => EditMember(member)">Edit</button>
+                                <button type="button" class="btn-delete" @onclick="() => ShowDeletePopup(member)">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert alert-info">
+        <small>Total members: @FilteredMembers.Count() (filtered from @members.Count total)</small>
+    </div>
+}
+else
+{
+    <div class="empty-state">
+        <p>No members found@(canManageMembers ? ". Click \"Add Member\" to get started." : ".")</p>
+    </div>
+}
+
+@if (showDeleteConfirmation && memberToDelete is not null)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h3>Delete Member</h3>
+
+            <p>Are you sure you want to delete this member?</p>
+            <p><strong>Name:</strong> @memberToDelete.FullName</p>
+            <p><strong>Organization:</strong> @memberToDelete.Organization</p>
+            <p><strong>Current Calling:</strong> @memberToDelete.CurrentCalling</p>
+
+            <div class="button-row">
+                <button type="button" class="btn-delete" @onclick="ConfirmDelete">Yes, Delete</button>
+                <button type="button" class="btn-secondary" @onclick="CancelDelete">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Member> members = new();
+    private Member currentMember = new();
+    private Member? memberToDelete;
+    private bool showForm;
+    private bool isEditing;
+    private bool showDeleteConfirmation;
+    private bool canManageMembers;
+    private string searchText = string.Empty;
+    private string activeStatusFilter = string.Empty;
+    private List<string> validationErrors = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        canManageMembers = authState.User.IsInRole("Admin") || authState.User.IsInRole("Leader");
+        activeStatusFilter = canManageMembers ? activeStatusFilter : string.Empty;
+
+        await LoadMembers();
+    }
+
+    private async Task LoadMembers()
+    {
+        members = await Service.GetMembersAsync();
+    }
+
+    private IEnumerable<Member> FilteredMembers
+    {
+        get
+        {
+            var query = members.AsEnumerable();
+
+            // Search across fields leaders commonly use when finding a member.
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(m =>
+                    m.FullName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.Email.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.Phone.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.Organization.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.CurrentCalling.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.AvailabilityNotes.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Member status is private, so only Admin/Leader users can filter by it.
+            if (canManageMembers && activeStatusFilter == "Active")
+            {
+                query = query.Where(m => m.ActiveStatus);
+            }
+            else if (canManageMembers && activeStatusFilter == "Inactive")
+            {
+                query = query.Where(m => !m.ActiveStatus);
+            }
+
+            return query.OrderBy(m => m.LastName).ThenBy(m => m.FirstName);
+        }
+    }
+
+    private void ShowCreateForm()
+    {
+        if (!CanRunMemberCrud())
+        {
+            return;
+        }
+
+        currentMember = new Member { ActiveStatus = true };
+        isEditing = false;
+        showForm = true;
+        validationErrors.Clear();
+    }
+
+    private void EditMember(Member member)
+    {
+        if (!CanRunMemberCrud())
+        {
+            return;
+        }
+
+        currentMember = new Member
+        {
+            Id = member.Id,
+            FirstName = member.FirstName,
+            LastName = member.LastName,
+            Email = member.Email,
+            Phone = member.Phone,
+            Organization = member.Organization,
+            CurrentCalling = member.CurrentCalling,
+            AvailabilityNotes = member.AvailabilityNotes,
+            ActiveStatus = member.ActiveStatus
+        };
+
+        isEditing = true;
+        showForm = true;
+        validationErrors.Clear();
+    }
+
+    private async Task SaveMember()
+    {
+        if (!CanRunMemberCrud())
+        {
+            return;
+        }
+
+        validationErrors = ValidateMember(currentMember);
+
+        if (validationErrors.Any())
+        {
+            return;
+        }
+
+        TrimMemberFields(currentMember);
+
+        if (isEditing)
+        {
+            await Service.UpdateMemberAsync(currentMember);
+        }
+        else
+        {
+            await Service.AddMemberAsync(currentMember);
+        }
+
+        showForm = false;
+        currentMember = new Member();
+        await LoadMembers();
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        isEditing = false;
+        currentMember = new Member();
+        validationErrors.Clear();
+    }
+
+    private void ShowDeletePopup(Member member)
+    {
+        if (!CanRunMemberCrud())
+        {
+            return;
+        }
+
+        // Keep the selected row available while the confirmation modal is open.
+        memberToDelete = member;
+        showDeleteConfirmation = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (!CanRunMemberCrud())
+        {
+            return;
+        }
+
+        if (memberToDelete is not null)
+        {
+            await Service.DeleteMemberAsync(memberToDelete.Id);
+            memberToDelete = null;
+            showDeleteConfirmation = false;
+            await LoadMembers();
+        }
+    }
+
+    private void CancelDelete()
+    {
+        memberToDelete = null;
+        showDeleteConfirmation = false;
+    }
+
+    private static List<string> ValidateMember(Member member)
+    {
+        var errors = new List<string>();
+
+        // Names are required so table sorting and confirmation text stay useful.
+        if (string.IsNullOrWhiteSpace(member.FirstName))
+        {
+            errors.Add("First Name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(member.LastName))
+        {
+            errors.Add("Last Name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(member.Email))
+        {
+            errors.Add("Email is required.");
+        }
+        else if (!IsValidEmail(member.Email))
+        {
+            errors.Add("Enter a valid email address.");
+        }
+
+        return errors;
+    }
+
+    private bool CanRunMemberCrud()
+    {
+        // Viewers can read the directory, but all write paths stay closed.
+        if (canManageMembers)
+        {
+            return true;
+        }
+
+        showForm = false;
+        showDeleteConfirmation = false;
+        memberToDelete = null;
+        validationErrors.Clear();
+        return false;
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        // Require a real domain suffix; MailAddress alone accepts values like dan@testmail.
+        var trimmedEmail = email.Trim();
+        const string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$";
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(
+                trimmedEmail,
+                emailPattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                TimeSpan.FromMilliseconds(250)))
+        {
+            return false;
+        }
+
+        try
+        {
+            var address = new System.Net.Mail.MailAddress(trimmedEmail);
+            return address.Address.Equals(trimmedEmail, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void TrimMemberFields(Member member)
+    {
+        member.FirstName = member.FirstName.Trim();
+        member.LastName = member.LastName.Trim();
+        member.Email = member.Email.Trim();
+        member.Phone = member.Phone.Trim();
+        member.Organization = member.Organization.Trim();
+        member.CurrentCalling = member.CurrentCalling.Trim();
+        member.AvailabilityNotes = member.AvailabilityNotes.Trim();
+    }
+}

@@ -1,0 +1,145 @@
+@page "/followups/edit/{id:int}"
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Edit Follow-Up</h1>
+
+@if (followUpForm is null)
+{
+    <p>Follow-up not found.</p>
+    <a class="btn-secondary" href="/followups">Back to Follow-Ups</a>
+}
+else
+{
+    <EditForm Model="followUpForm"
+            OnValidSubmit="SaveFollowUp"
+            FormName="EditFollowUpForm">
+        @if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            <div class="alert">
+                @validationMessage
+            </div>
+        }
+
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Meeting Date</label>
+                <InputDate @bind-Value="followUpForm.MeetingDate" />
+                <small class="text-muted">Date this follow-up came from a meeting.</small>
+            </div>
+
+            <div class="form-field">
+                <label>Follow-Up Item</label>
+                <InputText @bind-Value="followUpForm.FollowUpItemTitle" placeholder="Follow-Up Item" />
+                <small class="text-muted">What needs to be followed up on.</small>
+            </div>
+
+            <div class="form-field">
+                <label>Assigned Leader</label>
+                <InputText @bind-Value="followUpForm.AssignedLeader" placeholder="Assigned Leader" />
+                <small class="text-muted">Who is responsible for this follow-up.</small>
+            </div>
+
+            <div class="form-field">
+                <label>Related Family / Household</label>
+                <InputText @bind-Value="followUpForm.RelatedFamily" placeholder="Related Family / Household" />
+                <small class="text-muted">Family or household connected to this follow-up.</small>
+            </div>
+
+            <div class="form-field">
+                <label>Due Date</label>
+                <InputDate @bind-Value="followUpForm.DueDate" />
+                <small class="text-muted">When this follow-up should be completed.</small>
+            </div>
+
+            <div class="form-field">
+                <label>Status</label>
+                <InputSelect @bind-Value="followUpForm.Status">
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </InputSelect>
+                <small class="text-muted">Current progress.</small>
+            </div>
+        </div>
+
+        <div class="form-check mb-3">
+            <InputCheckbox class="form-check-input" @bind-Value="followUpForm.PrivacyFlag" />
+            <label class="form-check-label">Private follow-up</label>
+        </div>
+
+        <InputTextArea @bind-Value="followUpForm.CompletionNotes" placeholder="Completion Notes" />
+
+        <div class="button-row">
+            <button class="btn-primary" type="submit">Save Changes</button>
+            <a class="btn-secondary" href="/followups">Cancel</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private FollowUpItem? followUpForm;
+
+    private string validationMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var isAdmin = authState.User.IsInRole("Admin");
+
+        var selectedFollowUp = await Service.GetFollowUpByIdAsync(Id);
+
+        // Private follow-ups should not be opened by leaders through a direct URL.
+        if (selectedFollowUp is null || selectedFollowUp.PrivacyFlag && !isAdmin)
+        {
+            followUpForm = null;
+            return;
+        }
+
+        followUpForm = selectedFollowUp;
+    }
+
+    private async Task SaveFollowUp()
+    {
+        if (followUpForm is not null)
+        {
+            // Check required fields before saving changes back to the database.
+            validationMessage = ValidateFollowUp(followUpForm);
+
+            if (!string.IsNullOrWhiteSpace(validationMessage))
+            {
+                return;
+            }
+
+            await Service.UpdateFollowUpAsync(followUpForm);
+            Navigation.NavigateTo("/followups");
+        }
+    }
+
+    private static string ValidateFollowUp(FollowUpItem followUp)
+    {
+        if (string.IsNullOrWhiteSpace(followUp.FollowUpItemTitle))
+        {
+            return "Follow-up item is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(followUp.AssignedLeader))
+        {
+            return "Assigned leader is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(followUp.Status))
+        {
+            return "Status is required.";
+        }
+
+        return string.Empty;
+    }
+}

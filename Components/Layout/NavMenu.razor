@@ -1,0 +1,212 @@
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+@using Microsoft.AspNetCore.Identity
+@using WorkSync.Data
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span>
+                <span class="brand-name">WorkSync</span>
+                <span class="brand-subtitle">Leadership Tools</span>
+            </span>
+        </a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" aria-label="Toggle navigation menu" />
+
+<div class="nav-scrollable">
+    <nav class="nav flex-column">
+        <p class="nav-section-label">Workspace</p>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        @* User Management *@
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="dashboard">
+                        <span class="bi bi-dashboard-nav-menu" aria-hidden="true"></span> Dashboard
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* Callings*@
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="callings">
+                        <span class="bi bi-callings-nav-menu" aria-hidden="true"></span> Callings
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* Assignments*@
+        <AuthorizeView Roles="Admin,Leader">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="assignments">
+                        <span class="bi bi-assignments-nav-menu" aria-hidden="true"></span> Assignments
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* Follow-Ups *@
+        <AuthorizeView Roles="Admin,Leader">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="followups">
+                        <span class="bi bi-followups-nav-menu" aria-hidden="true"></span> Follow-Up
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* Members *@
+        <AuthorizeView Roles="Admin,Leader,Viewer">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="members">
+                        <span class="bi bi-members-nav-menu" aria-hidden="true"></span> Members
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* Reporting *@
+        <AuthorizeView Roles="Admin, Leader">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reports">
+                        <span class="bi bi-reports-nav-menu" aria-hidden="true"></span> Reports
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+
+                @* User Management  *@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Admin/ManageUsers">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <div>
+                                <span class="bi bi-person-check" aria-hidden="true"></span> Approve Users
+                            </div>
+                            @if (pendingCount > 0)
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1 small fw-bold animate-pulse">
+                                    @pendingCount
+                                </span>
+                            }
+                        </div>
+                    </NavLink>
+                </div>
+
+                @* Active Roster *@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Admin/UserList">
+                        <span class="bi bi-people-fill" aria-hidden="true"></span> Active Roster
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView>
+            <Authorized>
+                <p class="nav-section-label">Account</p>
+
+                @* Profile Management *@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Manage">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                    </NavLink>
+                </div>
+
+                @* Logout*@
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <p class="nav-section-label">Account</p>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Register">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Login">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+
+        <p class="nav-section-label">System</p>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link nav-link-muted" href="auth">
+                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+    private int pendingCount = 0;
+
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+        UpdatePendingCount();
+    }
+
+    private void UpdatePendingCount()
+    {
+        try
+        {
+            pendingCount = UserManager.Users.Count(u => !u.IsApproved);
+        }
+        catch
+        {
+            pendingCount = 0;
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+
+        UpdatePendingCount();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

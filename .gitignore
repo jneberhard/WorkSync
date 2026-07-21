@@ -1,0 +1,18 @@
+bin/
+obj/
+.vs/.DS_Store
+.vscode/
+
+.DS_Store
+**/.DS_Store
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# Local environment files and Vercel project metadata
+.env
+.env.*
+!.env.example
+.vercel/

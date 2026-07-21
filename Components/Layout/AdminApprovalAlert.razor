@@ -1,0 +1,78 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using WorkSync.Data
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@if (pendingUsersCount > 0 && showAlertModal)
+{
+    @* Pending Account Approvals Modal *@
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050;" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg border-0 rounded-4">
+                <div class="modal-header bg-warning bg-opacity-25 text-dark border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i> Pending Account Approvals
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-secondary fs-5 mb-0">
+                        You currently have <strong class="text-dark">@pendingUsersCount</strong> user registration request(s) waiting for access verification and role assignment.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-warning rounded-3 px-4 fw-semibold" @onclick="NavigateToApprovals">
+                        Review Requests Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int pendingUsersCount = 0;
+    private bool showAlertModal = true;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private void NavigateToApprovals()
+    {
+        showAlertModal = false;
+        NavigationManager.NavigateTo("/Admin/ManageUsers");
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var userPrincipal = authState.User;
+
+            if (userPrincipal.Identity is { IsAuthenticated: true } && userPrincipal.IsInRole("Admin"))
+            {
+                try
+                {
+                    using var context = await DbFactory.CreateDbContextAsync();
+
+                    pendingUsersCount = await context.Set<ApplicationUser>()
+                        .Where(u => !u.IsApproved)
+                        .CountAsync();
+                }
+                catch (Exception)
+                {
+                    pendingUsersCount = 0;
+                }
+            }
+        }
+    }
+
+    private void CloseModal()
+    {
+        showAlertModal = false;
+    }
+}

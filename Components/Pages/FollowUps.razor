@@ -1,0 +1,168 @@
+@page "/followups"
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Follow-Ups | WorkSync</PageTitle>
+
+<h1>Work Council Follow-Up</h1>
+
+<div class="button-row">
+    <a class="btn-primary" href="/followups/create">
+        Create Follow-Up
+    </a>
+</div>
+
+<hr />
+
+<div class="filter-row">
+    <div class="search-box">
+        <label class="visually-hidden" for="followup-search">Search follow-ups</label>
+        <span class="search-icon">🔍</span>
+
+        <InputText id="followup-search"
+                   @bind-Value="searchText"
+                   placeholder="Search follow-ups..." />
+    </div>
+
+    <label class="visually-hidden" for="followup-status-filter">Filter follow-ups by status</label>
+    <InputSelect id="followup-status-filter" @bind-Value="statusFilter">
+        <option value="">All Status</option>
+        <option value="Open">Open</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+    </InputSelect>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Meeting Date</th>
+            <th>Item</th>
+            <th>Leader</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in FilteredFollowUps)
+        {
+            <tr>
+                <td>@item.MeetingDate.ToShortDateString()</td>
+                <td>@item.FollowUpItemTitle</td>
+                <td>@item.AssignedLeader</td>
+                <td>@item.DueDate.ToShortDateString()</td>
+                <td>@item.Status</td>
+                <td>
+                    <a class="btn-view" href="/followups/details/@item.Id">View</a>
+                    <a class="btn-edit" href="/followups/edit/@item.Id">Edit</a>
+                    <button class="btn-delete" @onclick="() => DeleteFollowUp(item)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete this follow-up?</p>
+
+            <h2>@followUpToDelete?.FollowUpItemTitle</h2>
+            <p><strong>Assigned Leader:</strong> @followUpToDelete?.AssignedLeader</p>
+            <p><strong>Due Date:</strong> @followUpToDelete?.DueDate.ToShortDateString()</p>
+            <p><strong>Status:</strong> @followUpToDelete?.Status</p>
+
+            <div class="button-group">
+                <button class="btn-delete" @onclick="ConfirmDelete">Yes, Delete</button>
+                <button class="btn-secondary" @onclick="CancelDelete">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<FollowUpItem> followUps = new();
+
+    private FollowUpItem? followUpToDelete;
+
+    private string searchText = string.Empty;
+
+    private string statusFilter = string.Empty;
+
+    private bool isAdmin;
+
+    private bool showDeleteConfirmation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        // Admins can see private follow-ups; leaders only see regular follow-ups.
+        isAdmin = authState.User.IsInRole("Admin");
+
+        await LoadFollowUps();
+    }
+
+    private async Task LoadFollowUps()
+    {
+        var allFollowUps = await Service.GetFollowUpsAsync();
+
+        followUps = isAdmin
+            ? allFollowUps
+            : allFollowUps.Where(f => !f.PrivacyFlag).ToList();
+    }
+
+    private IEnumerable<FollowUpItem> FilteredFollowUps
+    {
+        get
+        {
+            var query = followUps.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(f =>
+                    f.FollowUpItemTitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    f.AssignedLeader.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    f.RelatedFamily.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    f.Status.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(statusFilter))
+            {
+                query = query.Where(f => f.Status == statusFilter);
+            }
+
+            return query.OrderBy(f => f.DueDate);
+        }
+    }
+
+    private void DeleteFollowUp(FollowUpItem followUp)
+    {
+        // Keep the item around while the confirmation modal is open.
+        followUpToDelete = followUp;
+        showDeleteConfirmation = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (followUpToDelete is not null)
+        {
+            await Service.DeleteFollowUpAsync(followUpToDelete.Id);
+            followUpToDelete = null;
+            showDeleteConfirmation = false;
+            await LoadFollowUps();
+        }
+    }
+
+    private void CancelDelete()
+    {
+        followUpToDelete = null;
+        showDeleteConfirmation = false;
+    }
+}

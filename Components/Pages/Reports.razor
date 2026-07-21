@@ -1,0 +1,652 @@
+@page "/reports"
+@rendermode InteractiveServer
+@inject WorkSyncService Service
+@inject IJSRuntime JS
+@attribute [Authorize(Roles = "Admin,Leader")]
+
+<PageTitle>Reports</PageTitle>
+
+<div class="report-header">
+    <h1>Reports</h1>
+    <p class="report-subtitle">
+        Track callings, assignments, and follow-up items across the work.
+        Use the filters to narrow every section at once.
+    </p>
+</div>
+
+<div class="report-filters">
+    <div class="report-filters-grid">
+        <div class="report-filter">
+            <label class="form-label" for="organization-filter">Organization</label>
+            <InputSelect id="organization-filter" @bind-Value="organizationFilter">
+                <option value="">All Organizations</option>
+                @foreach (var organization in organizations)
+                {
+                    <option value="@organization">@organization</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="report-filter">
+            <label class="form-label" for="leader-filter">Leader</label>
+            <InputSelect id="leader-filter" @bind-Value="leaderFilter">
+                <option value="">All Leaders</option>
+                @foreach (var leader in leaders)
+                {
+                    <option value="@leader">@leader</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="report-filter">
+            <label class="form-label" for="status-filter">Status</label>
+            <InputSelect id="status-filter" @bind-Value="statusFilter">
+                <option value="">All Status</option>
+                @foreach (var status in statuses)
+                {
+                    <option value="@status">@status</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="report-filter">
+            <label class="form-label" for="due-from-filter">Due From</label>
+            <InputDate id="due-from-filter" @bind-Value="dueDateFrom" />
+        </div>
+
+        <div class="report-filter">
+            <label class="form-label" for="due-to-filter">Due To</label>
+            <InputDate id="due-to-filter" @bind-Value="dueDateTo" />
+        </div>
+    </div>
+
+    <div class="report-filters-footer">
+        <p class="report-filter-status">
+            @(HasActiveFilters
+                ? ActiveFilterCount == 1 ? "1 filter active" : $"{ActiveFilterCount} filters active"
+                : "Showing all records")
+        </p>
+
+        <button type="button"
+                class="btn-secondary"
+                disabled="@(!HasActiveFilters)"
+                @onclick="ClearFilters">
+            Clear Filters
+        </button>
+    </div>
+</div>
+
+<section class="report-export" aria-labelledby="export-title">
+    <div>
+        <h2 id="export-title">Export Report</h2>
+        <p>
+            Download or copy a simple text summary using the current filters.
+        </p>
+        @if (!string.IsNullOrWhiteSpace(copyMessage))
+        {
+            <p class="report-export-status">@copyMessage</p>
+        }
+    </div>
+
+    <div class="report-export-actions">
+        <button type="button" class="btn-secondary" @onclick="DownloadReport">
+            Download Report
+        </button>
+        <button type="button" class="btn-secondary" @onclick="CopyReport">
+            Copy Report
+        </button>
+    </div>
+</section>
+
+@{
+    // Snapshot computed properties once so each section uses the same filtered results
+    // without re-evaluating the LINQ queries for every template reference below.
+    var openCallings = OpenCallings;
+    var callingsNeedingFollowUp = CallingsNeedingFollowUp;
+    var openAssignmentsByLeader = OpenAssignmentsByLeader;
+    var overdueAssignments = OverdueAssignments;
+    var completedAssignments = CompletedAssignments;
+    var overdueFollowUps = OverdueFollowUps;
+}
+
+<nav class="report-nav" aria-label="Report sections">
+    <a href="#open-callings">Open Callings <span class="report-nav-count">@openCallings.Count</span></a>
+    <a href="#callings-follow-up">Needing Follow-Up <span class="report-nav-count">@callingsNeedingFollowUp.Count</span></a>
+    <a href="#assignments-by-leader">By Leader <span class="report-nav-count">@openAssignmentsByLeader.Sum(g => g.Value.Count)</span></a>
+    <a href="#overdue-assignments">Overdue <span class="report-nav-count">@overdueAssignments.Count</span></a>
+    <a href="#completed-assignments">Completed <span class="report-nav-count">@completedAssignments.Count</span></a>
+    <a href="#overdue-follow-ups">Overdue Follow-Ups <span class="report-nav-count">@overdueFollowUps.Count</span></a>
+</nav>
+
+<section id="open-callings" class="report-section">
+    <div class="report-section-header">
+        <h2>Open Callings</h2>
+        <span class="report-count">@openCallings.Count</span>
+    </div>
+
+    @if (openCallings.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("open callings")</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Organization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var calling in openCallings)
+                    {
+                        <tr>
+                            <td>@calling.Title</td>
+                            <td>@calling.Organization</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section id="callings-follow-up" class="report-section">
+    <div class="report-section-header">
+        <h2>Callings Needing Follow-Up</h2>
+        <span class="report-count">@callingsNeedingFollowUp.Count</span>
+    </div>
+
+    @if (callingsNeedingFollowUp.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("callings needing follow-up")</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Organization</th>
+                        <th>Member Assigned</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var calling in callingsNeedingFollowUp)
+                    {
+                        <tr>
+                            <td>@calling.Title</td>
+                            <td>@calling.Organization</td>
+                            <td>@calling.MemberAssigned</td>
+                            <td><span class="@StatusBadgeClass(calling.Status)">@calling.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section id="assignments-by-leader" class="report-section">
+    <div class="report-section-header">
+        <h2>Assignments by Leader</h2>
+        <span class="report-count">@openAssignmentsByLeader.Sum(g => g.Value.Count)</span>
+    </div>
+
+    @if (openAssignmentsByLeader.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("open assignments")</p>
+    }
+    else
+    {
+        @foreach (var group in openAssignmentsByLeader)
+        {
+            <div class="report-leader-group">
+                <h3>@group.Key <span class="report-count">@group.Value.Count</span></h3>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Organization</th>
+                                <th>Due Date</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in group.Value)
+                            {
+                                <tr>
+                                    <td>@item.Title</td>
+                                    <td>@item.Organization</td>
+                                    <td class="@(item.DueDate < DateTime.Today ? "overdue-date" : null)">
+                                        @item.DueDate.ToShortDateString()
+                                    </td>
+                                    <td><span class="@PriorityBadgeClass(item.Priority)">@item.Priority</span></td>
+                                    <td><span class="@StatusBadgeClass(item.Status)">@item.Status</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</section>
+
+<section id="overdue-assignments" class="report-section">
+    <div class="report-section-header">
+        <h2>Overdue Assignments</h2>
+        <span class="report-count">@overdueAssignments.Count</span>
+    </div>
+
+    @if (overdueAssignments.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("overdue assignments")</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Leader</th>
+                        <th>Organization</th>
+                        <th>Due Date</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in overdueAssignments)
+                    {
+                        <tr>
+                            <td>@item.Title</td>
+                            <td>@item.AssignedLeader</td>
+                            <td>@item.Organization</td>
+                            <td class="overdue-date">@item.DueDate.ToShortDateString()</td>
+                            <td><span class="@PriorityBadgeClass(item.Priority)">@item.Priority</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section id="completed-assignments" class="report-section">
+    <div class="report-section-header">
+        <h2>Completed Assignments</h2>
+        <span class="report-count">@completedAssignments.Count</span>
+    </div>
+
+    @if (completedAssignments.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("completed assignments")</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Leader</th>
+                        <th>Organization</th>
+                        <th>Completion Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in completedAssignments)
+                    {
+                        <tr>
+                            <td>@item.Title</td>
+                            <td>@item.AssignedLeader</td>
+                            <td>@item.Organization</td>
+                            <td>@(item.CompletionDate.HasValue ? item.CompletionDate.Value.ToShortDateString() : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section id="overdue-follow-ups" class="report-section">
+    <div class="report-section-header">
+        <h2>Overdue Follow-Up Items</h2>
+        <span class="report-count">@overdueFollowUps.Count</span>
+    </div>
+
+    @if (overdueFollowUps.Count == 0)
+    {
+        <p class="report-empty">@EmptyMessage("overdue follow-up items")</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Leader</th>
+                        <th>Related Family</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in overdueFollowUps)
+                    {
+                        <tr>
+                            <td>@item.FollowUpItemTitle</td>
+                            <td>@item.AssignedLeader</td>
+                            @* Hide the family name when the follow-up is marked confidential *@
+                            <td>@(item.PrivacyFlag ? "— Confidential —" : item.RelatedFamily)</td>
+                            <td class="overdue-date">@item.DueDate.ToShortDateString()</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private List<Calling> callings = new();
+    private List<AssignmentItem> assignments = new();
+    private List<FollowUpItem> followUps = new();
+
+    private List<string> organizations = new();
+    private List<string> leaders = new();
+    private List<string> statuses = new();
+
+    private string organizationFilter = string.Empty;
+    private string leaderFilter = string.Empty;
+    private string statusFilter = string.Empty;
+    private DateTime? dueDateFrom;
+    private DateTime? dueDateTo;
+    private string copyMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        callings = await Service.GetCallingsAsync();
+        assignments = await Service.GetAssignmentsAsync();
+        followUps = await Service.GetFollowUpsAsync();
+
+        // Build filter dropdown options by merging distinct values from all data types.
+        // Organizations come from both callings and assignments; leaders from assignments and follow-ups.
+        organizations = callings.Select(c => c.Organization)
+            .Concat(assignments.Select(a => a.Organization))
+            .Where(o => !string.IsNullOrWhiteSpace(o))
+            .Distinct()
+            .OrderBy(o => o)
+            .ToList();
+
+        leaders = assignments.Select(a => a.AssignedLeader)
+            .Concat(followUps.Select(f => f.AssignedLeader))
+            .Where(l => !string.IsNullOrWhiteSpace(l))
+            .Distinct()
+            .OrderBy(l => l)
+            .ToList();
+
+        statuses = callings.Select(c => c.Status)
+            .Concat(assignments.Select(a => a.Status))
+            .Concat(followUps.Select(f => f.Status))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+    }
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrEmpty(organizationFilter) ||
+        !string.IsNullOrEmpty(leaderFilter) ||
+        !string.IsNullOrEmpty(statusFilter) ||
+        dueDateFrom.HasValue ||
+        dueDateTo.HasValue;
+
+    private int ActiveFilterCount =>
+        (string.IsNullOrEmpty(organizationFilter) ? 0 : 1) +
+        (string.IsNullOrEmpty(leaderFilter) ? 0 : 1) +
+        (string.IsNullOrEmpty(statusFilter) ? 0 : 1) +
+        (dueDateFrom.HasValue ? 1 : 0) +
+        (dueDateTo.HasValue ? 1 : 0);
+
+    private void ClearFilters()
+    {
+        organizationFilter = string.Empty;
+        leaderFilter = string.Empty;
+        statusFilter = string.Empty;
+        dueDateFrom = null;
+        dueDateTo = null;
+        copyMessage = string.Empty;
+    }
+
+    private string EmptyMessage(string what) =>
+        HasActiveFilters ? $"No {what} match the current filters." : $"No {what}.";
+
+    private static string StatusBadgeClass(string status) =>
+        "ws-badge badge-" + status.ToLowerInvariant().Replace(" ", "-");
+
+    private static string PriorityBadgeClass(string priority) =>
+        "ws-badge badge-priority-" + priority.ToLowerInvariant();
+
+    // Callings have no leader or due date, so only the organization and status filters apply.
+    private IEnumerable<Calling> FilteredCallings =>
+        callings.Where(c =>
+            (string.IsNullOrEmpty(organizationFilter) || c.Organization == organizationFilter) &&
+            (string.IsNullOrEmpty(statusFilter) || c.Status == statusFilter));
+
+    private IEnumerable<AssignmentItem> FilteredAssignments =>
+        assignments.Where(a =>
+            (string.IsNullOrEmpty(organizationFilter) || a.Organization == organizationFilter) &&
+            (string.IsNullOrEmpty(leaderFilter) || a.AssignedLeader == leaderFilter) &&
+            (string.IsNullOrEmpty(statusFilter) || a.Status == statusFilter) &&
+            (!dueDateFrom.HasValue || a.DueDate.Date >= dueDateFrom.Value.Date) &&
+            (!dueDateTo.HasValue || a.DueDate.Date <= dueDateTo.Value.Date));
+
+    // Follow-ups have no organization, so only the leader, status, and due date filters apply.
+    private IEnumerable<FollowUpItem> FilteredFollowUps =>
+        followUps.Where(f =>
+            (string.IsNullOrEmpty(leaderFilter) || f.AssignedLeader == leaderFilter) &&
+            (string.IsNullOrEmpty(statusFilter) || f.Status == statusFilter) &&
+            (!dueDateFrom.HasValue || f.DueDate.Date >= dueDateFrom.Value.Date) &&
+            (!dueDateTo.HasValue || f.DueDate.Date <= dueDateTo.Value.Date));
+
+    private List<Calling> OpenCallings =>
+        FilteredCallings.Where(c => c.Status == "Open").ToList();
+
+    private List<Calling> CallingsNeedingFollowUp =>
+        FilteredCallings.Where(c => c.NeedsFollowUp).ToList();
+
+    // Groups non-completed assignments by leader name, sorted alphabetically by leader
+    // and then by due date within each group so the most urgent items appear first.
+    private Dictionary<string, List<AssignmentItem>> OpenAssignmentsByLeader =>
+        FilteredAssignments
+            .Where(a => a.Status != "Completed")
+            .GroupBy(a => a.AssignedLeader)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.DueDate).ToList());
+
+    private List<AssignmentItem> OverdueAssignments =>
+        FilteredAssignments
+            .Where(a => a.DueDate < DateTime.Today && a.Status != "Completed")
+            .OrderBy(a => a.DueDate)
+            .ToList();
+
+    private List<AssignmentItem> CompletedAssignments =>
+        FilteredAssignments
+            .Where(a => a.Status == "Completed")
+            .OrderByDescending(a => a.CompletionDate)
+            .ToList();
+
+    private List<FollowUpItem> OverdueFollowUps =>
+        FilteredFollowUps
+            .Where(f => f.DueDate < DateTime.Today && f.Status != "Completed")
+            .OrderBy(f => f.DueDate)
+            .ToList();
+
+    private async Task DownloadReport()
+    {
+        var reportText = BuildReportText();
+        var fileName = $"WorkSync-Report-{DateTime.Today:yyyy-MM-dd}.txt";
+
+        await JS.InvokeVoidAsync("workSyncReports.downloadTextFile", fileName, reportText);
+        copyMessage = "Report downloaded.";
+    }
+
+    private async Task CopyReport()
+    {
+        await JS.InvokeVoidAsync("workSyncReports.copyText", BuildReportText());
+        copyMessage = "Report copied.";
+    }
+
+    private string BuildReportText()
+    {
+        var openCallings = OpenCallings;
+        var callingsNeedingFollowUp = CallingsNeedingFollowUp;
+        var openAssignmentsByLeader = OpenAssignmentsByLeader;
+        var overdueAssignments = OverdueAssignments;
+        var completedAssignments = CompletedAssignments;
+        var overdueFollowUps = OverdueFollowUps;
+
+        var report = new System.Text.StringBuilder();
+
+        report.AppendLine("WorkSync Report");
+        report.AppendLine($"Created: {DateTime.Now:g}");
+        report.AppendLine($"Filters: {FilterSummary}");
+        report.AppendLine();
+
+        report.AppendLine("Summary");
+        report.AppendLine($"- Open callings: {openCallings.Count}");
+        report.AppendLine($"- Callings needing follow-up: {callingsNeedingFollowUp.Count}");
+        report.AppendLine($"- Open assignments: {openAssignmentsByLeader.Sum(g => g.Value.Count)}");
+        report.AppendLine($"- Overdue assignments: {overdueAssignments.Count}");
+        report.AppendLine($"- Completed assignments: {completedAssignments.Count}");
+        report.AppendLine($"- Overdue follow-up items: {overdueFollowUps.Count}");
+        report.AppendLine();
+
+        AppendCallingSection(report, "Open Callings", openCallings);
+        AppendCallingSection(report, "Callings Needing Follow-Up", callingsNeedingFollowUp);
+
+        report.AppendLine("Assignments by Leader");
+        if (openAssignmentsByLeader.Count == 0)
+        {
+            report.AppendLine("- None");
+        }
+        else
+        {
+            foreach (var group in openAssignmentsByLeader)
+            {
+                report.AppendLine($"- {group.Key}: {group.Value.Count}");
+                foreach (var item in group.Value)
+                {
+                    report.AppendLine($"  - {item.Title} | {item.Organization} | Due {item.DueDate:d} | {item.Priority} | {item.Status}");
+                }
+            }
+        }
+        report.AppendLine();
+
+        AppendAssignmentSection(report, "Overdue Assignments", overdueAssignments);
+        AppendAssignmentSection(report, "Completed Assignments", completedAssignments);
+
+        report.AppendLine("Overdue Follow-Up Items");
+        if (overdueFollowUps.Count == 0)
+        {
+            report.AppendLine("- None");
+        }
+        else
+        {
+            foreach (var item in overdueFollowUps)
+            {
+                // Keep private family names out of exported reports too.
+                var family = item.PrivacyFlag ? "Confidential" : item.RelatedFamily;
+                report.AppendLine($"- {item.FollowUpItemTitle} | {item.AssignedLeader} | {family} | Due {item.DueDate:d}");
+            }
+        }
+
+        return report.ToString();
+    }
+
+    private string FilterSummary
+    {
+        get
+        {
+            if (!HasActiveFilters)
+            {
+                return "None";
+            }
+
+            var filters = new List<string>();
+
+            if (!string.IsNullOrEmpty(organizationFilter))
+            {
+                filters.Add($"Organization: {organizationFilter}");
+            }
+
+            if (!string.IsNullOrEmpty(leaderFilter))
+            {
+                filters.Add($"Leader: {leaderFilter}");
+            }
+
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                filters.Add($"Status: {statusFilter}");
+            }
+
+            if (dueDateFrom.HasValue)
+            {
+                filters.Add($"Due from: {dueDateFrom.Value:d}");
+            }
+
+            if (dueDateTo.HasValue)
+            {
+                filters.Add($"Due to: {dueDateTo.Value:d}");
+            }
+
+            return string.Join("; ", filters);
+        }
+    }
+
+    private static void AppendCallingSection(System.Text.StringBuilder report, string title, List<Calling> items)
+    {
+        report.AppendLine(title);
+
+        if (items.Count == 0)
+        {
+            report.AppendLine("- None");
+        }
+        else
+        {
+            foreach (var item in items)
+            {
+                report.AppendLine($"- {item.Title} | {item.Organization} | {item.Status}");
+            }
+        }
+
+        report.AppendLine();
+    }
+
+    private static void AppendAssignmentSection(System.Text.StringBuilder report, string title, List<AssignmentItem> items)
+    {
+        report.AppendLine(title);
+
+        if (items.Count == 0)
+        {
+            report.AppendLine("- None");
+        }
+        else
+        {
+            foreach (var item in items)
+            {
+                report.AppendLine($"- {item.Title} | {item.AssignedLeader} | {item.Organization} | Due {item.DueDate:d} | {item.Status}");
+            }
+        }
+
+        report.AppendLine();
+    }
+}

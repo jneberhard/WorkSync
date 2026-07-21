@@ -1,0 +1,163 @@
+@page "/Admin/ManageUsers"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Web
+@using WorkSync.Data
+
+@attribute [Authorize(Roles = "Admin")]
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+
+<PageTitle>Manage Users - Admin Center</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-dark font-weight-bold m-0">User Registration Approvals</h1>
+
+        <button type="button"
+                class="btn btn-primary shadow-sm rounded-3 px-3 fw-semibold"
+                data-bs-toggle="modal"
+                data-bs-target="#reviewRequestsModal">
+            <i class="bi bi-bell-fill me-1"></i> Review Requests Now
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (pendingUsers == null)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading registrations...</span>
+            </div>
+        </div>
+    }
+    else if (!pendingUsers.Any())
+    {
+        <div class="card p-5 text-center shadow-sm border-0 rounded-4 bg-light">
+            <i class="bi bi-people text-secondary mb-3" style="font-size: 3rem;"></i>
+            <h3 class="text-secondary">All clear!</h3>
+            <p class="text-muted mb-0">There are no pending user registration requests waiting for approval right now.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="px-4 py-3">Name</th>
+                            <th class="py-3">Email Address</th>
+                            <th class="py-3" style="width: 200px;">Assign Role</th>
+                            <th class="text-end px-4 py-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in pendingUsers)
+                        {
+                            if (!selectedRoles.ContainsKey(user.Id))
+                            {
+                                selectedRoles[user.Id] = "Viewer";
+                            }
+
+                            <tr>
+                                <td class="px-4 font-weight-bold">@user.LastName, @user.FirstName</td>
+                                <td class="text-secondary">@user.Email</td>
+                                <td>
+                                    <select class="form-select form-select-sm rounded-3" @bind="selectedRoles[user.Id]">
+                                        <option value="Viewer">Viewer</option>
+                                        <option value="Leader">Leader</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                </td>
+                                <td class="text-end px-4">
+                                    <button class="btn btn-sm btn-success rounded-3 px-3 fw-semibold"
+                                            @onclick="() => ApproveUserWithRole(user)">
+                                        <i class="bi bi-person-check-fill me-1"></i> Approve Access
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+
+@* POPUP MODAL )    *@
+<div class="modal fade" id="reviewRequestsModal" tabindex="-1" aria-labelledby="reviewRequestsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow border-0">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-weight-bold" id="reviewRequestsModalLabel">
+                    <i class="bi bi-shield-exclamation me-2 text-warning"></i> Attention Required
+                </h5>
+
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-exclamation-circle text-warning mb-3" style="font-size: 2.5rem;"></i>
+                <h4 class="text-dark font-weight-bold mb-2">Pending Approvals</h4>
+                <p class="text-muted mb-0">
+                    There are registration requests waiting for your review. Please evaluate the user access pipeline below to grant appropriate permissions.
+                </p>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 py-2">
+                <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Dismiss</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ApplicationUser>? pendingUsers;
+    private Dictionary<string, string> selectedRoles = new();
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingUsers();
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        pendingUsers = await UserManager.Users
+            .Where(u => !u.IsApproved)
+            .OrderBy(u => u.LastName)
+            .ToListAsync();
+    }
+
+    private async Task ApproveUserWithRole(ApplicationUser user)
+    {
+        var targetRole = selectedRoles[user.Id];
+
+        user.IsApproved = true;
+        var updateResult = await UserManager.UpdateAsync(user);
+
+        if (updateResult.Succeeded)
+        {
+            if (!await RoleManager.RoleExistsAsync(targetRole))
+            {
+                await RoleManager.CreateAsync(new IdentityRole(targetRole));
+            }
+
+            await UserManager.AddToRoleAsync(user, targetRole);
+
+            successMessage = $"Successfully approved account access for {user.Email} as an '{targetRole}'.";
+            selectedRoles.Remove(user.Id);
+
+            await LoadPendingUsers();
+        }
+    }
+}

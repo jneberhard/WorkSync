@@ -1,0 +1,10 @@
+.git
+.github
+.vercel
+bin
+obj
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*

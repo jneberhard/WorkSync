@@ -1,0 +1,59 @@
+@page "/assignments/details/{id:int}"
+@rendermode InteractiveServer
+
+@* ==================================================
+    ASSIGNMENT DETAILS PAGE
+    Displays complete information for a selected
+    assignment and provides navigation options.
+   ================================================== *@
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+
+<h1>Assignment Details</h1>
+
+@if (assignment is null)
+{
+    @* Display message if assignment cannot be found *@
+    <p>Assignment not found.</p>
+    <a class="btn-secondary" href="/assignments">Back to Assignments</a>
+}
+else
+{
+    @* Assignment information card *@
+    <div class="card">
+        <h2>@assignment.Title</h2>
+
+        <p><strong>Description:</strong> @assignment.Description</p>
+        <p><strong>Notes:</strong> @assignment.Notes</p>
+        <p><strong>Assigned Leader:</strong> @assignment.AssignedLeader</p>
+        <p><strong>Organization:</strong> @assignment.Organization</p>
+        <p><strong>Due Date:</strong> @assignment.DueDate.ToShortDateString()</p>
+        <p><strong>Priority:</strong> @assignment.Priority</p>
+        <p><strong>Status:</strong> @assignment.Status</p>
+        <p><strong>Completion Date:</strong> @(assignment.CompletionDate?.ToShortDateString() ?? "Not completed")</p>
+    </div>
+
+    //Action buttons for assignment management 
+    <div class="button-row">
+        <a class="btn-secondary" href="/assignments/calendar/@assignment.Id">Add to Calendar</a>
+        <a class="btn-edit" href="/assignments/edit/@assignment.Id">Edit</a>
+        <a class="btn-secondary" href="/assignments">Back to Assignments</a>
+    </div>
+}
+
+@code {
+
+    // Route parameter containing the assignment ID
+    [Parameter]
+    public int Id { get; set; }
+
+    // Stores the selected assignment record
+    private AssignmentItem? assignment;
+
+    // Load assignment data when the page initializes
+    protected override async Task OnInitializedAsync()
+    {
+        assignment = await Service.GetAssignmentByIdAsync(Id);
+    }
+}

@@ -1,0 +1,80 @@
+@page "/assignments/create"
+@rendermode InteractiveServer
+
+@* ==================================================
+   CREATE ASSIGNMENT PAGE
+   Allows authorized users to create and save
+   new assignments in the WorkSync system.
+   ================================================== *@
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+@inject NavigationManager Navigation
+
+<h1>Create Assignment</h1>
+
+<EditForm Model="assignmentForm"
+            OnValidSubmit="SaveAssignment"
+            FormName="CreateAssignmentForm">
+
+    @* Enables validation using data annotations *@
+    <DataAnnotationsValidator />
+
+    @* Displays validation errors to the user *@
+    <ValidationSummary />
+
+    @* Assignment details form *@
+    <div class="form-grid">
+        <InputText @bind-Value="assignmentForm.Title" placeholder="Assignment Title" />
+        <InputText @bind-Value="assignmentForm.AssignedLeader" placeholder="Assigned Leader" />
+        <InputText @bind-Value="assignmentForm.Organization" placeholder="Organization" />
+        <InputDate @bind-Value="assignmentForm.DueDate" />
+
+        <InputSelect @bind-Value="assignmentForm.Priority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </InputSelect>
+
+        <InputSelect @bind-Value="assignmentForm.Status">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+        </InputSelect>
+    </div>
+
+    @* Assignment description and notes *@
+    <InputTextArea @bind-Value="assignmentForm.Description" placeholder="Description" />
+    <InputTextArea @bind-Value="assignmentForm.Notes" placeholder="Notes" />
+
+    @* Optional completion date field *@
+    <div class="date-section">
+        <label class="form-label">Completion Date</label>
+        <InputDate @bind-Value="assignmentForm.CompletionDate" />
+    </div>
+
+    @* Form action buttons *@
+    <div class="button-row">
+        <button class="btn-primary" type="submit">+ Add Assignment</button>
+        <a class="btn-secondary" href="/assignments">Cancel</a>
+    </div>
+
+</EditForm>
+
+@code {
+
+    // Stores data entered into the assignment form
+    private AssignmentItem assignmentForm = new()
+    {
+        DueDate = DateTime.Today.AddDays(7),
+        Priority = "Medium",
+        Status = "Open"
+    };
+
+    // Save the assignment and return to the assignment list
+    private async Task SaveAssignment()
+    {
+        await Service.AddAssignmentAsync(assignmentForm);
+        Navigation.NavigateTo("/assignments");
+    }
+}

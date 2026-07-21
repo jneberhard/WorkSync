@@ -1,0 +1,230 @@
+@page "/dashboard"
+@using System.Globalization
+@inject WorkSyncService Service
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>WorkSync Dashboard</h1>
+
+@* Dashboard summary cards *@
+<div class="dashboard-grid">
+
+    <div class="card">
+        <h3>Open Assignments</h3>
+        <p class="stat">@openAssignments</p>
+    </div>
+
+    <div class="card">
+        <h3>Completed Assignments</h3>
+        <p class="stat">@completedAssignments</p>
+    </div>
+
+    <div class="card">
+        <h3>Overdue Items</h3>
+        <p class="stat overdue">@overdueAssignments</p>
+    </div>
+
+    <div class="card">
+        <h3>Open Callings</h3>
+        <p class="stat">@openCallings</p>
+    </div>
+
+</div>
+
+<div class="charts-grid">
+
+    <div class="card chart-card">
+        <h3>Assignments by Status</h3>
+        @RenderDonut(assignmentSegments)
+    </div>
+
+    <div class="card chart-card">
+        <h3>Callings by Status</h3>
+        @RenderDonut(callingSegments)
+    </div>
+
+    <div class="card chart-card">
+        <h3>Assignments by Organization</h3>
+        @if (organizationCounts.Count == 0)
+        {
+            <p class="chart-empty">No data yet.</p>
+        }
+        else
+        {
+            <div class="bar-chart">
+                @foreach (var org in organizationCounts)
+                {
+                    <div class="bar-row">
+                        <span class="bar-label" title="@org.Key">@org.Key</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: @BarWidth(org.Value)%"></div>
+                        </div>
+                        <span class="bar-value">@org.Value</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+</div>
+
+@* Upcoming assignments table *@
+<h2>Upcoming Assignments</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Leader</th>
+            <th>Due Date</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var assignment in assignments.Take(5))
+        {
+            <tr>
+                <td>@assignment.Title</td>
+                <td>@assignment.AssignedLeader</td>
+                <td>@assignment.DueDate.ToShortDateString()</td>
+                <td>@assignment.Status</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+
+    // Stores assignment and calling data retrieved from the database
+    private List<AssignmentItem> assignments = new();
+    private List<Calling> callings = new();
+
+    // Dashboard summary statistics
+    private int openAssignments;
+    private int completedAssignments;
+    private int overdueAssignments;
+    private int openCallings;
+
+    // Data used by dashboard charts
+    private List<ChartSegment> assignmentSegments = new();
+    private List<ChartSegment> callingSegments = new();
+    private List<KeyValuePair<string, int>> organizationCounts = new();
+    private int maxOrganizationCount;
+
+    // Represents a chart segment with a label, value, and display color
+    private record ChartSegment(string Label, int Count, string Color);
+
+    // Load dashboard data and generate chart statistics
+    protected override async Task OnInitializedAsync()
+    {
+        assignments = await Service.GetAssignmentsAsync();
+        callings = await Service.GetCallingsAsync();
+
+        // Calculate assignment statistics
+        openAssignments = assignments.Count(a => a.Status == "Open");
+        completedAssignments = assignments.Count(a => a.Status == "Completed");
+        overdueAssignments = assignments.Count(a =>
+            a.DueDate < DateTime.Today &&
+            a.Status != "Completed");
+
+        // Calculate calling statistics
+        openCallings = callings.Count(c => c.Status == "Open");
+
+        // Build assignment status chart data
+        assignmentSegments = new List<ChartSegment>
+        {
+            new("Open", openAssignments, "var(--ws-blue)"),
+            new("In Progress", assignments.Count(a => a.Status == "In Progress"), "var(--ws-navy)"),
+            new("Completed", completedAssignments, "var(--ws-green)")
+        };
+
+        // Build calling status chart data
+        callingSegments = new List<ChartSegment>
+        {
+            new("Open", openCallings, "var(--ws-blue)"),
+            new("Filled", callings.Count(c => c.Status == "Filled"), "var(--ws-green)"),
+            new("Released", callings.Count(c => c.Status == "Released"), "var(--ws-navy)")
+        };
+
+        // Group assignments by organization for bar chart display
+        organizationCounts = assignments
+            .GroupBy(a => a.Organization)
+            .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
+            .OrderByDescending(kv => kv.Value)
+            .ToList();
+
+        // Determine largest organization count for scaling bar widths
+        maxOrganizationCount = organizationCounts.Count > 0
+            ? organizationCounts.Max(kv => kv.Value)
+            : 0;
+    }
+
+    // Calculate bar chart width as a percentage of the largest value
+    private string BarWidth(int count) =>
+        maxOrganizationCount == 0
+            ? "0"
+            : (count * 100.0 / maxOrganizationCount)
+                .ToString("F1", CultureInfo.InvariantCulture);
+
+    // Render a donut chart using SVG graphics
+    private RenderFragment RenderDonut(List<ChartSegment> segments) => __builder =>
+    {
+        var total = segments.Sum(s => s.Count);
+
+        // Display message when no chart data exists
+        if (total == 0)
+        {
+            <p class="chart-empty">No data yet.</p>
+            return;
+        }
+
+        const double radius = 55;
+        var circumference = 2 * Math.PI * radius;
+        double offset = 0;
+
+        <div class="donut-chart">
+            <svg viewBox="0 0 160 160" role="img">
+
+                //Draw chart segments
+                <g transform="rotate(-90 80 80)">
+                    @foreach (var segment in segments.Where(s => s.Count > 0))
+                    {
+                        var dash = segment.Count * circumference / total;
+                        var dashAttr = dash.ToString("F2", CultureInfo.InvariantCulture);
+                        var gapAttr = (circumference - dash).ToString("F2", CultureInfo.InvariantCulture);
+                        var offsetAttr = (-offset).ToString("F2", CultureInfo.InvariantCulture);
+
+                        <circle cx="80" cy="80" r="55" fill="none"
+                                stroke="@segment.Color"
+                                stroke-width="26"
+                                stroke-dasharray="@dashAttr @gapAttr"
+                                stroke-dashoffset="@offsetAttr" />
+
+                        offset += dash;
+                    }
+                </g>
+
+                //Display total value in center of chart
+                <text x="80" y="80"
+                    text-anchor="middle"
+                    dominant-baseline="central"
+                    class="donut-total">
+                    @total
+                </text>
+            </svg>
+
+            //Chart legend
+            <ul class="donut-legend">
+                @foreach (var segment in segments)
+                {
+                    <li>
+                        <span class="legend-swatch"
+                            style="background: @segment.Color"></span>
+                        @segment.Label (@segment.Count)
+                    </li>
+                }
+            </ul>
+        </div>
+    };
+}

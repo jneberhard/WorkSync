@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using WorkSync.Data
+
+
+<div class="page">
+    <div class="sidebar">
+        @* sidebar *@
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <span class="top-row-title">WorkSync workspace</span>
+            <NavLink href="/about">About</NavLink>
+        </div>
+
+        <Breadcrumb />
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<footer class="app-footer px-4 py-3">
+    <div class="footer-content">
+        <p class="footer-copy">© 2026 WorkSync. All rights reserved.</p>
+        <p class="footer-team">Team members: James Eberhard · Kim Kathleen Bown · Jean Rubin Oxeant · Mario Leo Junior Meza Mancilla · Daniel 'Ezra' Rivera · Charles Hemedi · Natnael Gashaw</p>
+    </div>
+</footer>
+
+<div id="blazor-error-ui" data-nosnippet">
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <AdminApprovalAlert @rendermode="InteractiveServer" />
+    </Authorized>
+</AuthorizeView>

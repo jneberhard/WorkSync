@@ -1,0 +1,206 @@
+@page "/assignments"
+@rendermode InteractiveServer
+
+@* ==================================================
+   ASSIGNMENTS MANAGEMENT PAGE
+   Displays all assignments, supports searching,
+   filtering, viewing, editing, and deleting.
+   ================================================== *@
+
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+
+<PageTitle>Assignments | WorkSync</PageTitle>
+
+<h1>Manage Assignments</h1>
+
+@* Navigation button for creating a new assignment *@
+<div class="button-row">
+    <a class="btn-primary" href="/assignments/create">
+        Create Assignment
+    </a>
+</div>
+
+<hr />
+
+@* Search and status filtering controls *@
+<div class="filter-row">
+    <div class="search-box">
+        <label class="visually-hidden" for="assignment-search">Search assignments</label>
+        <span class="search-icon">🔍</span>
+
+        <InputText id="assignment-search"
+                    @bind-Value="searchText"
+                    placeholder="Search assignments..." />
+    </div>
+
+    <label class="visually-hidden" for="assignment-status-filter">Filter assignments by status</label>
+    <InputSelect id="assignment-status-filter" @bind-Value="statusFilter">
+        <option value="">All Status</option>
+        <option value="Open">Open</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+    </InputSelect>
+</div>
+
+@* Assignment listing table *@
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Leader</th>
+            <th>Organization</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var assignment in FilteredAssignments)
+        {
+            <tr>
+                <td>@assignment.Title</td>
+                <td>@assignment.AssignedLeader</td>
+                <td>@assignment.Organization</td>
+                <td>@assignment.DueDate.ToShortDateString()</td>
+                <td>@assignment.Priority</td>
+                <td>@assignment.Status</td>
+                <td>
+                    @* View assignment details *@
+                    <a class="btn-view" href="/assignments/details/@assignment.Id">View</a>
+
+                    @* Edit assignment *@
+                    <a class="btn-edit" href="/assignments/edit/@assignment.Id">Edit</a>
+
+                    @* Ask first so an assignment is not deleted by one wrong click. *@
+                    <button type="button"
+                            class="btn-delete"
+                            @onclick="() => ShowDeletePopup(assignment)">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@* Delete confirmation popup *@
+@if (showDeleteConfirmation && assignmentToDelete is not null)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h3>Delete Assignment</h3>
+
+            <p>Are you sure you want to delete this assignment?</p>
+
+            <p><strong>Title:</strong> @assignmentToDelete.Title</p>
+            <p><strong>Assigned Leader:</strong> @assignmentToDelete.AssignedLeader</p>
+            <p><strong>Organization:</strong> @assignmentToDelete.Organization</p>
+            <p><strong>Due Date:</strong> @assignmentToDelete.DueDate.ToShortDateString()</p>
+            <p><strong>Status:</strong> @assignmentToDelete.Status</p>
+
+            <div class="button-row">
+                <button type="button"
+                        class="btn-delete"
+                        @onclick="ConfirmDelete">
+                    Yes, Delete
+                </button>
+
+                <button type="button"
+                        class="btn-secondary"
+                        @onclick="CancelDelete">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+    // Stores all assignments retrieved from the database
+    private List<AssignmentItem> assignments = new();
+
+    // Search text entered by the user
+    private string searchText = string.Empty;
+
+    // Selected status filter value
+    private string statusFilter = string.Empty;
+
+    // Controls visibility of delete confirmation dialog
+    private bool showDeleteConfirmation;
+
+    // Stores the assignment selected for deletion
+    private AssignmentItem? assignmentToDelete;
+
+    // Load assignments when the page initializes
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssignments();
+    }
+
+    // Retrieve assignments from the database
+    private async Task LoadAssignments()
+    {
+        assignments = await Service.GetAssignmentsAsync();
+    }
+
+    // Returns filtered and sorted assignments
+    private IEnumerable<AssignmentItem> FilteredAssignments
+    {
+        get
+        {
+            var query = assignments.AsEnumerable();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(a =>
+                    a.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    a.AssignedLeader.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    a.Organization.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    a.Priority.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    a.Status.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Apply status filter
+            if (!string.IsNullOrWhiteSpace(statusFilter))
+            {
+                query = query.Where(a => a.Status == statusFilter);
+            }
+
+            // Sort assignments by due date
+            return query.OrderBy(a => a.DueDate);
+        }
+    }
+
+    // Save the selected row so the modal can show exactly what will be deleted.
+    private void ShowDeletePopup(AssignmentItem assignment)
+    {
+        assignmentToDelete = assignment;
+        showDeleteConfirmation = true;
+    }
+
+    // Delete selected assignment and refresh table
+    private async Task ConfirmDelete()
+    {
+        if (assignmentToDelete is not null)
+        {
+            await Service.DeleteAssignmentAsync(assignmentToDelete.Id);
+
+            showDeleteConfirmation = false;
+            assignmentToDelete = null;
+
+            await LoadAssignments();
+        }
+    }
+
+    // Close the modal and leave the assignment list unchanged.
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+        assignmentToDelete = null;
+    }
+}

@@ -1,0 +1,102 @@
+@page "/assignments/edit/{id:int}"
+@rendermode InteractiveServer
+
+@* ==================================================
+    EDIT ASSIGNMENT PAGE
+    Allows authorized users to update existing
+    assignment information and save changes.
+   ================================================== *@
+@attribute [Authorize(Roles = "Admin,Leader")]
+@inject WorkSyncService Service
+@inject NavigationManager Navigation
+
+<h1>Edit Assignment</h1>
+
+@if (assignmentForm is null)
+{
+    <p>Assignment not found.</p>
+    <a class="btn-secondary" href="/assignments">Back to Assignments</a>
+}
+else
+{
+    <EditForm Model="assignmentForm"
+            OnValidSubmit="SaveAssignment"
+            FormName="EditAssignmentForm">
+        
+            @* Enables model validation using data annotations *@
+        <DataAnnotationsValidator />
+        
+        @* Displays validation errors to the user *@
+        <ValidationSummary />
+
+        @* Assignment details form *@
+        <div class="form-grid">
+            <InputText @bind-Value="assignmentForm.Title" placeholder="Assignment Title" />
+
+            <InputText @bind-Value="assignmentForm.AssignedLeader"
+                        placeholder="Assigned Leader" />
+
+            <InputText @bind-Value="assignmentForm.Organization"
+                        placeholder="Organization" />
+
+            <InputDate @bind-Value="assignmentForm.DueDate" />
+
+            <InputSelect @bind-Value="assignmentForm.Priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+            </InputSelect>
+
+            <InputSelect @bind-Value="assignmentForm.Status">
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+            </InputSelect>
+        </div>
+
+        @* Assignment description and notes *@
+        <InputTextArea @bind-Value="assignmentForm.Description"
+                        placeholder="Description" />
+
+        <InputTextArea @bind-Value="assignmentForm.Notes"
+                        placeholder="Notes" />
+        
+        @* Optional completion date field *@
+        <div>
+            <label class="form-label">Completion Date</label>
+
+            <InputDate @bind-Value="assignmentForm.CompletionDate" />
+        </div>
+
+        @* Form action buttons *@
+        <div class="button-row">
+            <button class="btn-primary" type="submit">Save Changes</button>
+            <a class="btn-secondary" href="/assignments">Cancel</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    // Assignment ID supplied by the route parameter
+    [Parameter]
+    public int Id { get; set; }
+
+    // Stores the assignment being edited
+    private AssignmentItem? assignmentForm;
+
+    // Load assignment data when the page initializes
+    protected override async Task OnInitializedAsync()
+    {
+        assignmentForm = await Service.GetAssignmentByIdAsync(Id);
+    }
+
+    // Save changes and return to the assignments page
+    private async Task SaveAssignment()
+    {
+        if (assignmentForm is not null)
+        {
+            await Service.UpdateAssignmentAsync(assignmentForm);
+            Navigation.NavigateTo("/assignments");
+        }
+    }
+}

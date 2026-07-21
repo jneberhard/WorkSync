@@ -1,0 +1,316 @@
+@page "/"
+@rendermode InteractiveServer
+@inject WorkSyncService Service
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>WorkSync</PageTitle>
+
+<div class="home-page">
+    <section class="home-hero" aria-labelledby="home-title">
+        <img src="/images/WorkSync_picture.webp"
+            alt="Latter-day Saint meetinghouse with red brick, white steeple, lawn, and blue sky"
+            class="hero-meetinghouse-image" />
+
+        <div class="home-hero-overlay">
+            <div class="home-hero-text">
+                <p class="home-kicker">Work and Branch Leadership Workspace</p>
+                <h1 id="home-title">WorkSync</h1>
+                <p class="home-tagline">Organize callings, assignments, and follow-up in one place.</p>
+                <p class="home-summary">
+                    WorkSync helps work and branch leaders track callings, assignments, and follow-up in one place.
+                </p>
+
+                <AuthorizeView Context="homeAuth">
+                    <Authorized>
+                        <nav class="home-actions" aria-label="Primary home page links">
+                            <AuthorizeView Roles="Admin" Context="adminAuth">
+                                <Authorized>
+                                    <a class="home-button home-button-primary" href="/callings">Callings</a>
+                                    <a class="home-button" href="/dashboard">Dashboard</a>
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="Admin,Leader" Context="leaderAuth">
+                                <Authorized>
+                                    <a class="home-button" href="/assignments">Assignments</a>
+                                    <a class="home-button" href="/followups">Follow-Up</a>
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="Admin,Leader,Viewer" Context="viewerAuth">
+                                <Authorized>
+                                    <a class="home-button" href="/members">Members</a>
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <AuthorizeView Roles="Admin,Leader" Context="reportAuth">
+                                <Authorized>
+                                    <a class="home-button" href="/reports">Reports</a>
+                                </Authorized>
+                            </AuthorizeView>
+
+
+                            <AuthorizeView Roles="Admin" Context="reportAuth">
+                                <Authorized>
+                                    <a class="home-button" href="/admin/ManageUsers">Approve Users</a>
+                                    <a class="home-button" href="/admin/userList">Active Roster</a>
+                                </Authorized>
+                            </AuthorizeView>
+
+                            <form class="home-logout-form" action="Account/Logout" method="post">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="ReturnUrl" value="" />
+                                <button type="submit" class="home-button home-button-login">Log Out</button>
+                            </form>
+                        </nav>
+                    </Authorized>
+                    <NotAuthorized>
+                        <nav class="home-actions" aria-label="Primary home page links">
+                            <a class="home-button home-button-primary" href="/Account/Login">Login</a>
+                            <a class="home-button" href="/Account/Register">Register</a>
+                        </nav>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </section>
+
+    <div class="hero-stat-grid" aria-label="WorkSync quick benefits">
+        <article class="hero-stat-card">
+            <span class="hero-stat-icon" aria-hidden="true">1</span>
+            <h2>Track open needs</h2>
+            <p>Keep service needs and assignments visible.</p>
+        </article>
+
+        <article class="hero-stat-card">
+            <span class="hero-stat-icon" aria-hidden="true">2</span>
+            <h2>Review follow-up</h2>
+            <p>See what still needs attention.</p>
+        </article>
+
+        <article class="hero-stat-card">
+            <span class="hero-stat-icon" aria-hidden="true">3</span>
+            <h2>Prepare for council</h2>
+            <p>Bring clear updates into meetings.</p>
+        </article>
+    </div>
+
+    <section class="home-section" aria-labelledby="features-title">
+        <div class="section-heading">
+            <p class="section-kicker">Built for follow-through</p>
+            <h2 id="features-title">Key Features</h2>
+            <p>
+                Simple tools for keeping leadership work visible, organized, and ready for the next
+                work council conversation.
+            </p>
+        </div>
+
+        <div class="feature-grid">
+            @foreach (var card in VisibleFeatureCards)
+            {
+                @if (card.CanOpen)
+                {
+                    <a class="feature-card feature-card-link" href="@card.Href">
+                        <span class="@card.IconClass" aria-hidden="true"></span>
+                        <h3>@card.Title</h3>
+                        <p>@card.Description</p>
+                    </a>
+                }
+                else
+                {
+                    <article class="feature-card">
+                        <span class="@card.IconClass" aria-hidden="true"></span>
+                        <h3>@card.Title</h3>
+                        <p>@card.Description</p>
+                    </article>
+                }
+            }
+        </div>
+    </section>
+
+    <section class="home-section home-useful" aria-labelledby="useful-title">
+        <div>
+            <h2 id="useful-title">Why WorkSync Is Useful</h2>
+            <p>
+                Church leadership work often moves through meetings, messages, notes, and quick
+                hallway conversations. WorkSync gives leaders one simple place to see what is open,
+                who is helping, what needs follow-up, and what has already been completed.
+            </p>
+        </div>
+    </section>
+
+    <section class="home-section target-users" aria-labelledby="users-title">
+        <h2 id="users-title">Who WorkSync Is For</h2>
+
+        <ul class="target-user-list">
+            <li>Bishoprics and branch presidencies</li>
+            <li>Clerks and executive secretaries</li>
+            <li>Auxiliary presidencies</li>
+            <li>Work council members</li>
+            <li>Approved read-only users</li>
+        </ul>
+    </section>
+</div>
+
+
+@code {
+    // Stores all assignments retrieved from the database.
+    private List<AssignmentItem> assignments = new();
+
+    // Stores all callings retrieved from the database
+    private List<Calling> callings = new();
+
+    private int openAssignments; // Number of assignments with status "Open"
+    private int completedAssignments; // Number of completed assignments
+    private int overdueAssignments; // Number of assignments past due date
+    private int openCallings; // Number of open callings
+
+    private bool ShowNotification { get; set; } // Controls whether the reminder popup is displayed
+
+    // Values displayed inside the reminder popup
+    private int PendingAssignments { get; set; }
+    private int OverdueAssignments { get; set; }
+    private int FollowUpsNeeded { get; set; }
+    private int OpenCallings { get; set; }
+
+    // User authentication and authorization flags
+    private bool isSignedIn;
+    private bool isAdmin;
+    private bool isLeader;
+    private bool isViewer;
+
+    // Returns only the feature cards the current user is allowed to use.
+    // Guests can see all cards, but cannot open them.
+    private List<FeatureCard> VisibleFeatureCards =>
+        FeatureCards
+            .Where(card => !isSignedIn || card.CanUse(isAdmin, isLeader, isViewer))
+            .Select(card => card with { CanOpen = isSignedIn && card.CanUse(isAdmin, isLeader, isViewer) })
+            .ToList();
+
+    // Runs when the page is first loaded.
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the current authentication state.
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Guests see all cards for learning, but signed-in users only see cards their role can open.
+        isSignedIn = user.Identity?.IsAuthenticated == true;
+        isAdmin = user.IsInRole("Admin");
+        isLeader = user.IsInRole("Leader");
+        isViewer = user.IsInRole("Viewer");
+
+        // Load assignments and callings from the service.
+        assignments = await Service.GetAssignmentsAsync();
+        callings = await Service.GetCallingsAsync();
+
+        // Calculate assignment statistics.
+        openAssignments = assignments.Count(a => a.Status == "Open");
+        completedAssignments = assignments.Count(a => a.Status == "Completed");
+
+        // Assignment is overdue if due date has passed and it is not completed
+        overdueAssignments = assignments.Count(a =>
+            a.DueDate < DateTime.Today &&
+            a.Status != "Completed");
+
+        // Calculate number of open callings
+        openCallings = callings.Count(c => c.Status == "Open");
+
+        // Set values used by the notification popup
+        PendingAssignments = openAssignments;
+        OverdueAssignments = overdueAssignments;
+        OpenCallings = openCallings;
+
+        // Placeholder for future follow-up tracking.
+        FollowUpsNeeded = 0;
+
+        // Show popup if there is anything requiring attention.
+        ShowNotification =
+            PendingAssignments > 0 ||
+            OverdueAssignments > 0 ||
+            OpenCallings > 0 ||
+            FollowUpsNeeded > 0;
+    }
+
+    // Hides the notification popup and refreshes the UI
+    private async Task CloseNotification()
+    {
+        ShowNotification = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Defines a dashboard feature card.
+    private sealed record FeatureCard(
+        string Title, // Card title
+        string Description, // Card description
+        string IconClass, // CSS icon class
+        string Href, // Navigation URL
+        Func<bool, bool, bool, bool> CanUse) // Permission check
+    {
+        // Determines whether the card can be clicked/opened.
+        public bool CanOpen { get; init; }
+    }
+
+    // List of available dashboard features and role permissions.
+    private static readonly List<FeatureCard> FeatureCards =
+    [
+        new(
+            "Track Callings",
+            "Keep calling status, organization, assigned member, and follow-up needs easy to review.",
+            "feature-icon feature-icon-clipboard",
+            "/callings",
+            (isAdmin, _, _) => isAdmin),
+        new(
+            "Manage Assignments",
+            "Record assignments, leaders, priorities, due dates, notes, and current progress.",
+            "feature-icon feature-icon-list",
+            "/assignments",
+            (isAdmin, isLeader, _) => isAdmin || isLeader),
+        new(
+            "Track Follow-Up",
+            "See what needs attention and help work council members stay aligned on next steps.",
+            "feature-icon feature-icon-followup",
+            "/followups",
+            (isAdmin, isLeader, _) => isAdmin || isLeader),
+        new(
+            "View Reports",
+            "Review open callings, overdue assignments, and other summaries for leadership meetings.",
+            "feature-icon feature-icon-report",
+            "/reports",
+            (isAdmin, isLeader, _) => isAdmin || isLeader)
+    ];
+}
+
+<!-- Only users in the Admin role can see this popup -->
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <!-- Display popup only when ShowNotification is true -->
+        @if (ShowNotification)
+        {
+            <div class="modal-overlay">
+                <div class="modal-box">
+
+                    <!-- Popup title -->
+                    <h3>Task Reminder</h3>
+
+                    <!-- Summary message -->
+                    <p>You currently have:</p>
+
+                    <!-- Task statistics -->
+                    <ul>
+                        <li>@PendingAssignments pending assignments</li>
+                        <li>@OverdueAssignments overdue assignments</li>
+                        <li>@OpenCallings open callings</li>
+                        <li>@FollowUpsNeeded follow-up items</li>
+                    </ul>
+
+                    <!-- Closes the popup when clicked -->
+                    <button class="btn btn-primary"
+                            @onclick="() => ShowNotification = false">
+                        OK
+                    </button>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
