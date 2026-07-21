@@ -268,9 +268,9 @@ namespace WorkSync.Migrations
                 columns: new[] { "Id", "AssignedLeader", "CompletionDate", "Description", "DueDate", "Notes", "Organization", "Priority", "Status", "Title" },
                 values: new object[,]
                 {
-                    { 1, "James Carter", null, "Plan transport and refreshments for youth activity.", new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Local), "Confirm van availability.", "Young Men", "High", "Open", "Youth Activity Planning" },
-                    { 2, "Sarah Johnson", null, "Follow up with sisters who haven't been contacted.", new DateTime(2026, 6, 6, 0, 0, 0, 0, DateTimeKind.Local), "", "Relief Society", "Medium", "Open", "Ministering Interview Follow-Up" },
-                    { 3, "Tom Rivera", new DateTime(2026, 5, 19, 0, 0, 0, 0, DateTimeKind.Local), "Update weekly bulletin with new announcements.", new DateTime(2026, 5, 20, 0, 0, 0, 0, DateTimeKind.Local), "", "Bishopric", "Low", "Completed", "Bulletin Update" }
+                    { 1, "James Carter", null, "Plan transport and refreshments for youth activity.", new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Utc), "Confirm van availability.", "Young Men", "High", "Open", "Youth Activity Planning" },
+                    { 2, "Sarah Johnson", null, "Follow up with sisters who haven't been contacted.", new DateTime(2026, 6, 6, 0, 0, 0, 0, DateTimeKind.Utc), "", "Relief Society", "Medium", "Open", "Ministering Interview Follow-Up" },
+                    { 3, "Tom Rivera", new DateTime(2026, 5, 19, 0, 0, 0, 0, DateTimeKind.Utc), "Update weekly bulletin with new announcements.", new DateTime(2026, 5, 20, 0, 0, 0, 0, DateTimeKind.Utc), "", "Bishopric", "Low", "Completed", "Bulletin Update" }
                 });
 
             migrationBuilder.InsertData(
@@ -279,7 +279,7 @@ namespace WorkSync.Migrations
                 values: new object[,]
                 {
                     { 1, null, null, null, "Sarah Johnson", true, "Needs to be filled before next month.", "Primary", "Open", "Primary Teacher" },
-                    { 2, null, null, new DateTime(2024, 1, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), "James Carter", false, "", "Elders Quorum", "Filled", "Elders Quorum President" },
+                    { 2, null, null, new DateTime(2024, 1, 14, 0, 0, 0, 0, DateTimeKind.Utc), "James Carter", false, "", "Elders Quorum", "Filled", "Elders Quorum President" },
                     { 3, null, null, null, "", true, "", "Relief Society", "Open", "Relief Society Secretary" }
                 });
 
@@ -288,8 +288,8 @@ namespace WorkSync.Migrations
                 columns: new[] { "Id", "AssignedLeader", "CompletionNotes", "DueDate", "FollowUpItemTitle", "MeetingDate", "PrivacyFlag", "RelatedFamily", "Status" },
                 values: new object[,]
                 {
-                    { 1, "James Carter", "", new DateTime(2026, 6, 6, 0, 0, 0, 0, DateTimeKind.Local), "Work Council Action Item", new DateTime(2026, 5, 23, 0, 0, 0, 0, DateTimeKind.Local), false, "Sample Family", "Open" },
-                    { 2, "Sarah Johnson", "", new DateTime(2026, 5, 28, 0, 0, 0, 0, DateTimeKind.Local), "Service Coordination", new DateTime(2026, 5, 16, 0, 0, 0, 0, DateTimeKind.Local), true, "Sample Family B", "Open" }
+                    { 1, "James Carter", "", new DateTime(2026, 6, 6, 0, 0, 0, 0, DateTimeKind.Utc), "Work Council Action Item", new DateTime(2026, 5, 23, 0, 0, 0, 0, DateTimeKind.Utc), false, "Sample Family", "Open" },
+                    { 2, "Sarah Johnson", "", new DateTime(2026, 5, 28, 0, 0, 0, 0, DateTimeKind.Utc), "Service Coordination", new DateTime(2026, 5, 16, 0, 0, 0, 0, DateTimeKind.Utc), true, "Sample Family B", "Open" }
                 });
 
             migrationBuilder.InsertData(
