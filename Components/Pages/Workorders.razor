@@ -1,21 +1,21 @@
-@page "/callings"
+@page "/workorders"
 @rendermode InteractiveServer
 @inject WorkSyncService Service
 @inject NavigationManager Navigation
 
 @attribute [Authorize(Roles = "Admin,Leader")]
 
-<PageTitle>Callings | WorkSync</PageTitle>
+<PageTitle>Workorders | WorkSync</PageTitle>
 
-<h1>Calling Tracker</h1>
+<h1>Workorder Tracker</h1>
 
 @if (showForm)
 {
     <div class="card" style="margin-bottom: 2rem;">
-        <h3>@(isEditing ? "Edit Calling" : "Create New Calling")</h3>
+        <h3>@(isEditing ? "Edit Workorder" : "Create New Workorder")</h3>
         
         <!-- EditForm with validation - OnValidSubmit only fires when all validation passes -->
-        <EditForm EditContext="editContext" OnValidSubmit="SaveCalling" OnInvalidSubmit="HandleInvalidSubmit">
+        <EditForm EditContext="editContext" OnValidSubmit="SaveWorkorder" OnInvalidSubmit="HandleInvalidSubmit">
             <DataAnnotationsValidator />
             
             <!-- Validation summary - displays all validation errors at the top -->
@@ -34,67 +34,67 @@
             <div class="form-grid">
                 <!-- Each form field shows individual validation message below it -->
                 <div class="form-field">
-                    <label>Calling Title</label>
-                    <InputText @bind-Value="currentCalling.Title" />
-                    <ValidationMessage For="@(() => currentCalling.Title)" />
+                    <label>Workorder Title</label>
+                    <InputText @bind-Value="currentWorkorder.Title" />
+                    <ValidationMessage For="@(() => currentWorkorder.Title)" />
                 </div>
 
                 <div class="form-field">
-                    <label>Organization</label>
-                    <InputText @bind-Value="currentCalling.Organization" />
-                    <ValidationMessage For="@(() => currentCalling.Organization)" />
+                    <label>Department</label>
+                    <InputText @bind-Value="currentWorkorder.Department" />
+                    <ValidationMessage For="@(() => currentWorkorder.Department)" />
                 </div>
 
                 <div class="form-field">
-                    <label>Assigned Member</label>
-                    <InputText @bind-Value="currentCalling.MemberAssigned" />
-                    <ValidationMessage For="@(() => currentCalling.MemberAssigned)" />
+                    <label>Assigned Employee</label>
+                    <InputText @bind-Value="currentWorkorder.AssignedEmployee" />
+                    <ValidationMessage For="@(() => currentWorkorder.AssignedEmployee)" />
                 </div>
 
                 <div class="form-field">
                     <label>Status</label>
-                    <InputSelect @bind-Value="currentCalling.Status">
+                    <InputSelect @bind-Value="currentWorkorder.Status">
                         <option value="Open">Open</option>
-                        <option value="Filled">Filled</option>
-                        <option value="Released">Released</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
                     </InputSelect>
-                    <ValidationMessage For="@(() => currentCalling.Status)" />
+                    <ValidationMessage For="@(() => currentWorkorder.Status)" />
                 </div>
 
                 <div class="form-field">
                     <label>
-                        <InputCheckbox @bind-Value="currentCalling.NeedsFollowUp" />
+                        <InputCheckbox @bind-Value="currentWorkorder.NeedsFollowUp" />
                         Needs Follow-Up
                     </label>
                 </div>
 
                 <div class="form-field">
-                    <label>Date Extended</label>
-                    <InputDate @bind-Value="currentCalling.DateExtended" />
-                    <ValidationMessage For="@(() => currentCalling.DateExtended)" />
+                    <label>Created Date</label>
+                    <InputDate @bind-Value="currentWorkorder.CreatedDate" />
+                    <ValidationMessage For="@(() => currentWorkorder.CreatedDate)" />
                 </div>
 
                 <div class="form-field">
-                    <label>Date Sustained</label>
-                    <InputDate @bind-Value="currentCalling.DateSustained" />
-                    <ValidationMessage For="@(() => currentCalling.DateSustained)" />
+                    <label>Due Date</label>
+                    <InputDate @bind-Value="currentWorkorder.DueDate" />
+                    <ValidationMessage For="@(() => currentWorkorder.DueDate)" />
                 </div>
 
                 <div class="form-field">
-                    <label>Date Released</label>
-                    <InputDate @bind-Value="currentCalling.DateReleased" />
-                    <ValidationMessage For="@(() => currentCalling.DateReleased)" />
+                    <label>Completed Date</label>
+                    <InputDate @bind-Value="currentWorkorder.CompletedDate" />
+                    <ValidationMessage For="@(() => currentWorkorder.CompletedDate)" />
                 </div>
 
                 <div class="form-field">
                     <label>Notes</label>
-                    <InputTextArea @bind-Value="currentCalling.Notes" rows="3" />
-                    <ValidationMessage For="@(() => currentCalling.Notes)" />
+                    <InputTextArea @bind-Value="currentWorkorder.Notes" rows="3" />
+                    <ValidationMessage For="@(() => currentWorkorder.Notes)" />
                 </div>
             </div>
 
             <div class="button-group">
-                <button type="submit" class="btn-primary">@(isEditing ? "Update Calling" : "+ Add Calling")</button>
+                <button type="submit" class="btn-primary">@(isEditing ? "Update Workorder" : "+ Add Workorder")</button>
                 <button type="button" class="btn-secondary" @onclick="CancelForm">Cancel</button>
             </div>
         </EditForm>
@@ -102,33 +102,33 @@
 }
 
 <div style="margin-bottom: 1rem;">
-    <button class="btn-primary" @onclick="ShowCreateForm">+ Add New Calling</button>
+    <button class="btn-primary" @onclick="ShowCreateForm">+ Add New Workorder</button>
     <button class="btn-secondary" @onclick="RefreshData" style="margin-left: 0.5rem;">Refresh</button>
 </div>
 
-<!-- Filter row for searching and filtering callings -->
+<!-- Filter row for searching and filtering workorders -->
 <div class="filter-row">
     <div class="search-box">
-        <label class="visually-hidden" for="calling-search">Search callings</label>
+        <label class="visually-hidden" for="workorder-search">Search workorders</label>
         <span class="search-icon">🔍</span>
-        <InputText id="calling-search"
+        <InputText id="workorder-search"
                    @bind-Value="searchText"
-                   placeholder="Search callings..." />
+                   placeholder="Search workorders..." />
     </div>
 
-    <label class="visually-hidden" for="calling-status-filter">Filter callings by status</label>
-    <InputSelect id="calling-status-filter" @bind-Value="statusFilter">
+    <label class="visually-hidden" for="workorder-status-filter">Filter workorders by status</label>
+    <InputSelect id="workorder-status-filter" @bind-Value="statusFilter">
         <option value="">All Status</option>
         <option value="Open">Open</option>
-        <option value="Filled">Filled</option>
-        <option value="Released">Released</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
     </InputSelect>
 </div>
 
 @if (isLoading)
 {
     <div class="loading">
-        <p>Loading callings...</p>
+        <p>Loading workorders...</p>
     </div>
 }
 else if (errorMessage != null)
@@ -137,41 +137,41 @@ else if (errorMessage != null)
         <p><strong>Error:</strong> @errorMessage</p>
     </div>
 }
-else if (FilteredCallings.Any())
+else if (FilteredWorkorders.Any())
 {
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
                     <th>Title</th>
-                    <th>Organization</th>
-                    <th>Member</th>
+                    <th>Department</th>
+                    <th>Assigned Employee</th>
                     <th>Status</th>
                     <th>Follow-Up</th>
-                    <th>Date Extended</th>
-                    <th>Date Sustained</th>
-                    <th>Date Released</th>
+                    <th>Created Date</th>
+                    <th>Due Date</th>
+                    <th>Completed Date</th>
                     <th>Notes</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Display filtered callings with edit and delete buttons -->
-                @foreach (var calling in FilteredCallings)
+                <!-- Display filtered workorders with edit and delete buttons -->
+                @foreach (var workorder in FilteredWorkorders)
                 {
                     <tr>
-                        <td>@calling.Title</td>
-                        <td>@calling.Organization</td>
-                        <td>@calling.MemberAssigned</td>
-                        <td>@calling.Status</td>
-                        <td>@(calling.NeedsFollowUp ? "Yes" : "No")</td>
-                        <td>@(calling.DateExtended?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td>@(calling.DateSustained?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td>@(calling.DateReleased?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td>@calling.Notes</td>
+                        <td>@workorder.Title</td>
+                        <td>@workorder.Department</td>
+                        <td>@workorder.AssignedEmployee</td>
+                        <td>@workorder.Status</td>
+                        <td>@(workorder.NeedsFollowUp ? "Yes" : "No")</td>
+                        <td>@(workorder.CreatedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td>@(workorder.DueDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td>@(workorder.CompletedDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td>@workorder.Notes</td>
                         <td>
-                            <button class="btn-edit" @onclick="() => EditCalling(calling)">Edit</button>
-                            <button class="btn-delete" @onclick="() => DeleteCalling(calling.Id)">Delete</button>
+                            <button class="btn-edit" @onclick="() => EditWorkorder(workorder)">Edit</button>
+                            <button class="btn-delete" @onclick="() => DeleteWorkorder(workorder.Id)">Delete</button>
                          </td>
                     </tr>
                 }
@@ -179,13 +179,13 @@ else if (FilteredCallings.Any())
         </table>
     </div>
     <div class="alert alert-info">
-        <small>Total callings: @FilteredCallings.Count() (filtered from @callings.Count total)</small>
+        <small>Total workorders: @FilteredWorkorders.Count() (filtered from @workorders.Count total)</small>
     </div>
 }
 else
 {
     <div class="empty-state">
-        <p>No callings found. Click "Add New Calling" to get started!</p>
+        <p>No workorders found. Click "Add New Workorder" to get started!</p>
     </div>
 }
 
@@ -195,8 +195,8 @@ else
     <div class="modal-overlay">
         <div class="modal-content">
             <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this calling?</p>
-            <p><strong>@callingToDelete?.Title</strong> - @callingToDelete?.Organization</p>
+            <p>Are you sure you want to delete this workorder?</p>
+            <p><strong>@workorderToDelete?.Title</strong> - @workorderToDelete?.Department</p>
             <div class="button-group">
                 <button class="btn-delete" @onclick="ConfirmDelete">Yes, Delete</button>
                 <button class="btn-secondary" @onclick="CancelDelete">Cancel</button>
@@ -207,9 +207,9 @@ else
 
 @code {
     // Data and state properties
-    private List<Calling> callings = new();
-    private Calling currentCalling = new();
-    private Calling? callingToDelete = null;
+    private List<Workorder> workorders = new();
+    private Workorder currentWorkorder = new();
+    private Workorder? workorderToDelete = null;
     private EditContext? editContext;
     private bool showForm = false;
     private bool isEditing = false;
@@ -237,7 +237,7 @@ else
         await LoadData();
     }
 
-    // Fetch all callings from the database
+    // Fetch all workorders from the database
     private async Task LoadData()
     {
         try
@@ -246,7 +246,7 @@ else
             errorMessage = null;
             StateHasChanged();
             
-            callings = await Service.GetCallingsAsync();
+            workorders = await Service.GetWorkordersAsync();
             
             isLoading = false;
             StateHasChanged();
@@ -259,19 +259,19 @@ else
         }
     }
 
-    // Filter callings based on search text and status filter
-    private IEnumerable<Calling> FilteredCallings
+    // Filter workorders based on search text and status filter
+    private IEnumerable<Workorder> FilteredWorkorders
     {
         get
         {
-            var query = callings.AsEnumerable();
+            var query = workorders.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(c =>
                     c.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    c.Organization.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    c.MemberAssigned.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    c.Department.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    c.AssignedEmployee.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     c.Status.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     c.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase));
             }
@@ -285,15 +285,15 @@ else
         }
     }
 
-    // Initialize form for creating a new calling
+    // Initialize form for creating a new workorder
     private void ShowCreateForm()
     {
-        currentCalling = new Calling();
+        currentWorkorder = new Workorder();
         isEditing = false;
         showForm = true;
         formError = false;
         validationErrors.Clear();
-        editContext = new EditContext(currentCalling);
+        editContext = new EditContext(currentWorkorder);
         
         // Real-time validation as user types
         editContext.OnFieldChanged += (sender, e) =>
@@ -305,27 +305,27 @@ else
         StateHasChanged();
     }
 
-    // Populate form with existing calling data for editing
-    private void EditCalling(Calling calling)
+    // Populate form with existing workorder data for editing
+    private void EditWorkorder(Workorder workorder)
     {
-        currentCalling = new Calling
+        currentWorkorder = new Workorder
         {
-            Id = calling.Id,
-            Title = calling.Title,
-            Organization = calling.Organization,
-            MemberAssigned = calling.MemberAssigned,
-            Status = calling.Status,
-            NeedsFollowUp = calling.NeedsFollowUp,
-            DateExtended = calling.DateExtended,
-            DateSustained = calling.DateSustained,
-            DateReleased = calling.DateReleased,
-            Notes = calling.Notes
+            Id = workorder.Id,
+            Title = workorder.Title,
+            Department = workorder.Department,
+            AssignedEmployee = workorder.AssignedEmployee,
+            Status = workorder.Status,
+            NeedsFollowUp = workorder.NeedsFollowUp,
+            CreatedDate = workorder.CreatedDate,
+            DueDate = workorder.DueDate,
+            CompletedDate = workorder.CompletedDate,
+            Notes = workorder.Notes
         };
         isEditing = true;
         showForm = true;
         formError = false;
         validationErrors.Clear();
-        editContext = new EditContext(currentCalling);
+        editContext = new EditContext(currentWorkorder);
         
         editContext.OnFieldChanged += (sender, e) =>
         {
@@ -351,30 +351,30 @@ else
         StateHasChanged();
     }
 
-    // Save or update calling based on isEditing flag
-    private async Task SaveCalling()
+    // Save or update workorder based on isEditing flag
+    private async Task SaveWorkorder()
     {
         formError = false;
         validationErrors.Clear();
         
         if (isEditing)
         {
-            await Service.UpdateCallingAsync(currentCalling);
+            await Service.UpdateWorkorderAsync(currentWorkorder);
         }
         else
         {
-            await Service.AddCallingAsync(currentCalling);
+            await Service.AddWorkorderAsync(currentWorkorder);
         }
 
         showForm = false;
-        currentCalling = new Calling();
+        currentWorkorder = new Workorder();
         await LoadData();
     }
 
     private void CancelForm()
     {
         showForm = false;
-        currentCalling = new Calling();
+        currentWorkorder = new Workorder();
         isEditing = false;
         formError = false;
         validationErrors.Clear();
@@ -382,9 +382,9 @@ else
     }
 
     // Show delete confirmation modal
-    private void DeleteCalling(int id)
+    private void DeleteWorkorder(int id)
     {
-        callingToDelete = callings.FirstOrDefault(c => c.Id == id);
+        workorderToDelete = workorders.FirstOrDefault(c => c.Id == id);
         showDeleteConfirmation = true;
         StateHasChanged();
     }
@@ -392,11 +392,11 @@ else
     // Perform actual deletion after confirmation
     private async Task ConfirmDelete()
     {
-        if (callingToDelete != null)
+        if (workorderToDelete != null)
         {
-            await Service.DeleteCallingAsync(callingToDelete.Id);
+            await Service.DeleteWorkorderAsync(workorderToDelete.Id);
             showDeleteConfirmation = false;
-            callingToDelete = null;
+            workorderToDelete = null;
             await LoadData();
         }
     }
@@ -404,7 +404,7 @@ else
     private void CancelDelete()
     {
         showDeleteConfirmation = false;
-        callingToDelete = null;
+        workorderToDelete = null;
         StateHasChanged();
     }
 }

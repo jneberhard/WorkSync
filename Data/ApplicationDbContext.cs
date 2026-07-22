@@ -6,7 +6,7 @@ namespace WorkSync.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public DbSet<Calling> Callings => Set<Calling>();
+    public DbSet<Workorder> Workorders => Set<Workorder>();
     public DbSet<AssignmentItem> Assignments => Set<AssignmentItem>();
     public DbSet<FollowUpItem> FollowUpItems => Set<FollowUpItem>();
     public DbSet<Member> Members => Set<Member>();
@@ -15,35 +15,43 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<Calling>().HasData(
-            new Calling
+        builder.Entity<Workorder>().HasData(
+            new Workorder
             {
                 Id = 1,
-                Title = "Primary Teacher",
-                Organization = "Primary",
-                MemberAssigned = "Sarah Johnson",
+                Title = "Equipment safety inspection",
+                Department = "Facilities",
+                AssignedEmployee = "Sarah Johnson",
                 Status = "Open",
                 NeedsFollowUp = true,
-                Notes = "Needs to be filled before next month."
+                CreatedDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 7, 29, 0, 0, 0, DateTimeKind.Utc),
+                Notes = "Review the inspection checklist at the next operations meeting."
             },
-            new Calling
+            new Workorder
             {
                 Id = 2,
-                Title = "Elders Quorum President",
-                Organization = "Elders Quorum",
-                MemberAssigned = "James Carter",
-                Status = "Filled",
-                NeedsFollowUp = false,
-                DateSustained = new DateTime(2024, 1, 14, 0, 0, 0, DateTimeKind.Utc)
+                Title = "Quarterly inventory review",
+                Department = "Operations",
+                AssignedEmployee = "James Carter",
+                Status = "In Progress",
+                NeedsFollowUp = true,
+                CreatedDate = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 8, 5, 0, 0, 0, DateTimeKind.Utc),
+                Notes = "Confirm outstanding counts with warehouse leads."
             },
-            new Calling
+            new Workorder
             {
                 Id = 3,
-                Title = "Relief Society Secretary",
-                Organization = "Relief Society",
-                MemberAssigned = "",
-                Status = "Open",
-                NeedsFollowUp = true
+                Title = "Client onboarding checklist",
+                Department = "Customer Success",
+                AssignedEmployee = "Tom Rivera",
+                Status = "Completed",
+                NeedsFollowUp = false,
+                CreatedDate = new DateTime(2026, 7, 8, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 7, 18, 0, 0, 0, DateTimeKind.Utc),
+                CompletedDate = new DateTime(2026, 7, 17, 0, 0, 0, DateTimeKind.Utc),
+                Notes = "Access, training, and kickoff steps completed."
             }
         );
 
@@ -51,37 +59,37 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new AssignmentItem
             {
                 Id = 1,
-                Title = "Youth Activity Planning",
-                Description = "Plan transport and refreshments for youth activity.",
-                AssignedLeader = "James Carter",
-                Organization = "Young Men",
-                DueDate = new DateTime(2026, 5, 27, 0, 0, 0, DateTimeKind.Utc),
+                Title = "Prepare quarterly planning meeting",
+                Description = "Compile the agenda, project updates, and department metrics.",
+                AssignedOwner = "James Carter",
+                Department = "Operations",
+                DueDate = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
                 Priority = "High",
                 Status = "Open",
-                Notes = "Confirm van availability."
+                Notes = "Confirm presenters and circulate the agenda one day early."
             },
             new AssignmentItem
             {
                 Id = 2,
-                Title = "Ministering Interview Follow-Up",
-                Description = "Follow up with sisters who haven't been contacted.",
-                AssignedLeader = "Sarah Johnson",
-                Organization = "Relief Society",
-                DueDate = new DateTime(2026, 6, 6, 0, 0, 0, DateTimeKind.Utc),
+                Title = "Review vendor proposals",
+                Description = "Compare pricing, delivery schedules, and support terms.",
+                AssignedOwner = "Sarah Johnson",
+                Department = "Facilities",
+                DueDate = new DateTime(2026, 8, 3, 0, 0, 0, DateTimeKind.Utc),
                 Priority = "Medium",
-                Status = "Open"
+                Status = "In Progress"
             },
             new AssignmentItem
             {
                 Id = 3,
-                Title = "Bulletin Update",
-                Description = "Update weekly bulletin with new announcements.",
-                AssignedLeader = "Tom Rivera",
-                Organization = "Bishopric",
-                DueDate = new DateTime(2026, 5, 20, 0, 0, 0, DateTimeKind.Utc),
+                Title = "Publish meeting action summary",
+                Description = "Send the approved decisions, owners, and due dates to the team.",
+                AssignedOwner = "Tom Rivera",
+                Department = "Customer Success",
+                DueDate = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
                 Priority = "Low",
                 Status = "Completed",
-                CompletionDate = new DateTime(2026, 5, 19, 0, 0, 0, DateTimeKind.Utc)
+                CompletionDate = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc)
             }
         );
 
@@ -89,26 +97,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new FollowUpItem
             {
                 Id = 1,
-                MeetingDate = new DateTime(2026, 5, 23, 0, 0, 0, DateTimeKind.Utc),
-                FollowUpItemTitle = "Work Council Action Item",
-                AssignedLeader = "James Carter",
-                RelatedFamily = "Sample Family",
-                DueDate = new DateTime(2026, 6, 6, 0, 0, 0, DateTimeKind.Utc),
+                MeetingDate = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
+                FollowUpItemTitle = "Quarterly planning action items",
+                AssignedOwner = "James Carter",
+                RelatedProject = "Q3 Operations Plan",
+                DueDate = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc),
                 Status = "Open",
-                PrivacyFlag = false,
-                CompletionNotes = ""
+                IsConfidential = false,
+                CompletionNotes = "Confirm owners for each approved initiative."
             },
             new FollowUpItem
             {
                 Id = 2,
-                MeetingDate = new DateTime(2026, 5, 16, 0, 0, 0, DateTimeKind.Utc),
-                FollowUpItemTitle = "Service Coordination",
-                AssignedLeader = "Sarah Johnson",
-                RelatedFamily = "Sample Family B",
-                DueDate = new DateTime(2026, 5, 28, 0, 0, 0, DateTimeKind.Utc),
-                Status = "Open",
-                PrivacyFlag = true,
-                CompletionNotes = ""
+                MeetingDate = new DateTime(2026, 7, 18, 0, 0, 0, DateTimeKind.Utc),
+                FollowUpItemTitle = "Security review follow-up",
+                AssignedOwner = "Sarah Johnson",
+                RelatedProject = "ERP Upgrade",
+                DueDate = new DateTime(2026, 7, 25, 0, 0, 0, DateTimeKind.Utc),
+                Status = "In Progress",
+                IsConfidential = true,
+                CompletionNotes = "Document access-control decisions before implementation."
             }
         );
 
@@ -120,9 +128,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 LastName = "Johnson",
                 Email = "sarah@example.com",
                 Phone = "555-1111",
-                Organization = "Relief Society",
-                CurrentCalling = "Relief Society President",
-                AvailabilityNotes = "Evenings preferred",
+                Department = "Facilities",
+                CurrentWorkorder = "Equipment safety inspection",
+                AvailabilityNotes = "Available weekday mornings",
                 ActiveStatus = true
             },
             new Member
@@ -132,9 +140,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 LastName = "Carter",
                 Email = "james@example.com",
                 Phone = "555-2222",
-                Organization = "Elders Quorum",
-                CurrentCalling = "Elders Quorum President",
-                AvailabilityNotes = "Available weekends",
+                Department = "Operations",
+                CurrentWorkorder = "Quarterly inventory review",
+                AvailabilityNotes = "Available afternoons",
                 ActiveStatus = true
             },
             new Member
@@ -144,9 +152,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 LastName = "Rivera",
                 Email = "tom@example.com",
                 Phone = "555-3333",
-                Organization = "Bishopric",
-                CurrentCalling = "First Counselor",
-                AvailabilityNotes = "",
+                Department = "Customer Success",
+                CurrentWorkorder = "Client onboarding checklist",
+                AvailabilityNotes = "Available for customer meetings after 10:00 AM",
                 ActiveStatus = true
             }
         );

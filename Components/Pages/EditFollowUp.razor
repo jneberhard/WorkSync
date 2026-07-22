@@ -39,15 +39,15 @@ else
             </div>
 
             <div class="form-field">
-                <label>Assigned Leader</label>
-                <InputText @bind-Value="followUpForm.AssignedLeader" placeholder="Assigned Leader" />
+                <label>Assigned Owner</label>
+                <InputText @bind-Value="followUpForm.AssignedOwner" placeholder="Assigned Owner" />
                 <small class="text-muted">Who is responsible for this follow-up.</small>
             </div>
 
             <div class="form-field">
-                <label>Related Family / Household</label>
-                <InputText @bind-Value="followUpForm.RelatedFamily" placeholder="Related Family / Household" />
-                <small class="text-muted">Family or household connected to this follow-up.</small>
+                <label>Related Project or Meeting Topic</label>
+                <InputText @bind-Value="followUpForm.RelatedProject" placeholder="Related project or meeting topic" />
+                <small class="text-muted">Project, initiative, or discussion connected to this follow-up.</small>
             </div>
 
             <div class="form-field">
@@ -68,8 +68,8 @@ else
         </div>
 
         <div class="form-check mb-3">
-            <InputCheckbox class="form-check-input" @bind-Value="followUpForm.PrivacyFlag" />
-            <label class="form-check-label">Private follow-up</label>
+            <InputCheckbox class="form-check-input" @bind-Value="followUpForm.IsConfidential" />
+            <label class="form-check-label">Confidential follow-up</label>
         </div>
 
         <InputTextArea @bind-Value="followUpForm.CompletionNotes" placeholder="Completion Notes" />
@@ -97,7 +97,7 @@ else
         var selectedFollowUp = await Service.GetFollowUpByIdAsync(Id);
 
         // Private follow-ups should not be opened by leaders through a direct URL.
-        if (selectedFollowUp is null || selectedFollowUp.PrivacyFlag && !isAdmin)
+        if (selectedFollowUp is null || selectedFollowUp.IsConfidential && !isAdmin)
         {
             followUpForm = null;
             return;
@@ -130,9 +130,9 @@ else
             return "Follow-up item is required.";
         }
 
-        if (string.IsNullOrWhiteSpace(followUp.AssignedLeader))
+        if (string.IsNullOrWhiteSpace(followUp.AssignedOwner))
         {
-            return "Assigned leader is required.";
+            return "Assigned owner is required.";
         }
 
         if (string.IsNullOrWhiteSpace(followUp.Status))

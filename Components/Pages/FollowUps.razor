@@ -7,7 +7,7 @@
 
 <PageTitle>Follow-Ups | WorkSync</PageTitle>
 
-<h1>Work Council Follow-Up</h1>
+<h1>Meeting Follow-Ups</h1>
 
 <div class="button-row">
     <a class="btn-primary" href="/followups/create">
@@ -41,7 +41,7 @@
         <tr>
             <th>Meeting Date</th>
             <th>Item</th>
-            <th>Leader</th>
+            <th>Owner</th>
             <th>Due Date</th>
             <th>Status</th>
             <th>Actions</th>
@@ -54,7 +54,7 @@
             <tr>
                 <td>@item.MeetingDate.ToShortDateString()</td>
                 <td>@item.FollowUpItemTitle</td>
-                <td>@item.AssignedLeader</td>
+                <td>@item.AssignedOwner</td>
                 <td>@item.DueDate.ToShortDateString()</td>
                 <td>@item.Status</td>
                 <td>
@@ -75,7 +75,7 @@
             <p>Are you sure you want to delete this follow-up?</p>
 
             <h2>@followUpToDelete?.FollowUpItemTitle</h2>
-            <p><strong>Assigned Leader:</strong> @followUpToDelete?.AssignedLeader</p>
+            <p><strong>Assigned Owner:</strong> @followUpToDelete?.AssignedOwner</p>
             <p><strong>Due Date:</strong> @followUpToDelete?.DueDate.ToShortDateString()</p>
             <p><strong>Status:</strong> @followUpToDelete?.Status</p>
 
@@ -115,7 +115,7 @@
 
         followUps = isAdmin
             ? allFollowUps
-            : allFollowUps.Where(f => !f.PrivacyFlag).ToList();
+            : allFollowUps.Where(f => !f.IsConfidential).ToList();
     }
 
     private IEnumerable<FollowUpItem> FilteredFollowUps
@@ -128,8 +128,8 @@
             {
                 query = query.Where(f =>
                     f.FollowUpItemTitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    f.AssignedLeader.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    f.RelatedFamily.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    f.AssignedOwner.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    f.RelatedProject.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     f.Status.Contains(searchText, StringComparison.OrdinalIgnoreCase));
             }
 

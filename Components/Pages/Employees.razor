@@ -1,18 +1,18 @@
-@page "/members"
+@page "/employees"
 @rendermode InteractiveServer
 @inject WorkSyncService Service
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize(Roles = "Admin,Leader,Viewer")]
 
-<PageTitle>Members | WorkSync</PageTitle>
+<PageTitle>Employees | WorkSync</PageTitle>
 
-<h1>Member Directory</h1>
+<h1>Employee Directory</h1>
 
 @if (showForm && canManageMembers)
 {
     <div class="card" style="margin-bottom: 2rem;">
-        <h3>@(isEditing ? "Edit Member" : "Create Member")</h3>
+        <h3>@(isEditing ? "Edit Employee" : "Create Employee")</h3>
 
         <EditForm Model="currentMember" FormName="member-form" OnSubmit="SaveMember">
             @if (validationErrors.Any())
@@ -49,13 +49,13 @@
                 </div>
 
                 <div class="form-field">
-                    <label class="form-label" for="organization">Organization</label>
-                    <input id="organization" @bind="currentMember.Organization" @bind:event="oninput" />
+                    <label class="form-label" for="department">Department</label>
+                    <input id="department" @bind="currentMember.Department" @bind:event="oninput" />
                 </div>
 
                 <div class="form-field">
-                    <label class="form-label" for="current-calling">Current Calling</label>
-                    <input id="current-calling" @bind="currentMember.CurrentCalling" @bind:event="oninput" />
+                    <label class="form-label" for="current-workorder">Current Workorder</label>
+                    <input id="current-workorder" @bind="currentMember.CurrentWorkorder" @bind:event="oninput" />
                 </div>
 
                 <div class="form-field">
@@ -72,7 +72,7 @@
             </div>
 
             <div class="button-row">
-                <button type="submit" class="btn-primary">@(isEditing ? "Update Member" : "+ Add Member")</button>
+                <button type="submit" class="btn-primary">@(isEditing ? "Update Employee" : "+ Add Employee")</button>
                 <button type="button" class="btn-secondary" @onclick="CancelForm">Cancel</button>
             </div>
         </EditForm>
@@ -82,24 +82,24 @@
 @if (canManageMembers)
 {
     <div class="button-row">
-        <button type="button" class="btn-primary" @onclick="ShowCreateForm">+ Add Member</button>
+        <button type="button" class="btn-primary" @onclick="ShowCreateForm">+ Add Employee</button>
         <button type="button" class="btn-secondary" @onclick="LoadMembers">Refresh</button>
     </div>
 }
 
 <div class="filter-row">
     <div class="search-box">
-        <label class="visually-hidden" for="member-search">Search members</label>
+        <label class="visually-hidden" for="member-search">Search employees</label>
         <span class="search-icon">🔍</span>
         <InputText id="member-search"
                    @bind-Value="searchText"
-                   placeholder="Search members..." />
+                   placeholder="Search employees..." />
     </div>
 
     @if (canManageMembers)
     {
         @* Status is private, so this filter is only rendered for managing roles. *@
-        <label class="visually-hidden" for="member-status-filter">Filter members by status</label>
+        <label class="visually-hidden" for="member-status-filter">Filter employees by status</label>
         <InputSelect id="member-status-filter" @bind-Value="activeStatusFilter">
             <option value="">All Status</option>
             <option value="Active">Active</option>
@@ -117,8 +117,8 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Phone</th>
-                    <th>Organization</th>
-                    <th>Current Calling</th>
+                    <th>Department</th>
+                    <th>Current Workorder</th>
                     <th>Availability Notes</th>
                     @if (canManageMembers)
                     {
@@ -138,8 +138,8 @@
                         <td>@member.FullName</td>
                         <td>@member.Email</td>
                         <td>@member.Phone</td>
-                        <td>@member.Organization</td>
-                        <td>@member.CurrentCalling</td>
+                        <td>@member.Department</td>
+                        <td>@member.CurrentWorkorder</td>
                         <td>@member.AvailabilityNotes</td>
                         @if (canManageMembers)
                         {
@@ -163,13 +163,13 @@
     </div>
 
     <div class="alert alert-info">
-        <small>Total members: @FilteredMembers.Count() (filtered from @members.Count total)</small>
+        <small>Total employees: @FilteredMembers.Count() (filtered from @members.Count total)</small>
     </div>
 }
 else
 {
     <div class="empty-state">
-        <p>No members found@(canManageMembers ? ". Click \"Add Member\" to get started." : ".")</p>
+        <p>No employees found@(canManageMembers ? ". Click \"Add Employee\" to get started." : ".")</p>
     </div>
 }
 
@@ -177,12 +177,12 @@ else
 {
     <div class="modal-overlay">
         <div class="modal-content">
-            <h3>Delete Member</h3>
+            <h3>Delete Employee</h3>
 
-            <p>Are you sure you want to delete this member?</p>
+            <p>Are you sure you want to delete this employee?</p>
             <p><strong>Name:</strong> @memberToDelete.FullName</p>
-            <p><strong>Organization:</strong> @memberToDelete.Organization</p>
-            <p><strong>Current Calling:</strong> @memberToDelete.CurrentCalling</p>
+            <p><strong>Department:</strong> @memberToDelete.Department</p>
+            <p><strong>Current Workorder:</strong> @memberToDelete.CurrentWorkorder</p>
 
             <div class="button-row">
                 <button type="button" class="btn-delete" @onclick="ConfirmDelete">Yes, Delete</button>
@@ -224,19 +224,19 @@ else
         {
             var query = members.AsEnumerable();
 
-            // Search across fields leaders commonly use when finding a member.
+            // Search across fields managers commonly use when finding an employee.
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(m =>
                     m.FullName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     m.Email.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     m.Phone.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    m.Organization.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    m.CurrentCalling.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.Department.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    m.CurrentWorkorder.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     m.AvailabilityNotes.Contains(searchText, StringComparison.OrdinalIgnoreCase));
             }
 
-            // Member status is private, so only Admin/Leader users can filter by it.
+            // Employee status is restricted, so only Admin/Leader users can filter by it.
             if (canManageMembers && activeStatusFilter == "Active")
             {
                 query = query.Where(m => m.ActiveStatus);
@@ -277,8 +277,8 @@ else
             LastName = member.LastName,
             Email = member.Email,
             Phone = member.Phone,
-            Organization = member.Organization,
-            CurrentCalling = member.CurrentCalling,
+            Department = member.Department,
+            CurrentWorkorder = member.CurrentWorkorder,
             AvailabilityNotes = member.AvailabilityNotes,
             ActiveStatus = member.ActiveStatus
         };
@@ -434,8 +434,8 @@ else
         member.LastName = member.LastName.Trim();
         member.Email = member.Email.Trim();
         member.Phone = member.Phone.Trim();
-        member.Organization = member.Organization.Trim();
-        member.CurrentCalling = member.CurrentCalling.Trim();
+        member.Department = member.Department.Trim();
+        member.CurrentWorkorder = member.CurrentWorkorder.Trim();
         member.AvailabilityNotes = member.AvailabilityNotes.Trim();
     }
 }

@@ -15,7 +15,7 @@
             <div class="home-hero-text">
                 <p class="home-kicker">Company Leadership Workspace</p>
                 <h1 id="home-title">WorkSync</h1>
-                <p class="home-tagline">Change company organization, assignments, and follow-up on tasks.</p>
+                <p class="home-tagline">Change company department, assignments, and follow-up on tasks.</p>
                 <p class="home-summary">
                     WorkSync helps company leaders to track work orders and assignments that are discussed in meetings.
                 </p>
@@ -25,7 +25,7 @@
                         <nav class="home-actions" aria-label="Primary home page links">
                             <AuthorizeView Roles="Admin" Context="adminAuth">
                                 <Authorized>
-                                    <a class="home-button home-button-primary" href="/callings">Callings</a>
+                                    <a class="home-button home-button-primary" href="/workorders">Workorders</a>
                                     <a class="home-button" href="/dashboard">Dashboard</a>
                                 </Authorized>
                             </AuthorizeView>
@@ -39,7 +39,7 @@
 
                             <AuthorizeView Roles="Admin,Leader,Viewer" Context="viewerAuth">
                                 <Authorized>
-                                    <a class="home-button" href="/members">Members</a>
+                                    <a class="home-button" href="/employees">Employees</a>
                                 </Authorized>
                             </AuthorizeView>
 
@@ -53,7 +53,7 @@
                             <AuthorizeView Roles="Admin" Context="reportAuth">
                                 <Authorized>
                                     <a class="home-button" href="/admin/ManageUsers">Approve Users</a>
-                                    <a class="home-button" href="/admin/userList">Active Roster</a>
+                                    <a class="home-button" href="/admin/userList">User Directory</a>
                                 </Authorized>
                             </AuthorizeView>
 
@@ -100,8 +100,8 @@
             <p class="section-kicker">Built for follow-through</p>
             <h2 id="features-title">Key Features</h2>
             <p>
-                Simple tools for keeping leadership work visible, organized, and ready for the next
-                work council conversation.
+                Simple tools for keeping meeting decisions visible, organized, and ready for the next
+                team discussion.
             </p>
         </div>
 
@@ -132,7 +132,7 @@
         <div>
             <h2 id="useful-title">Why WorkSync Is Useful</h2>
             <p>
-                Church leadership work often moves through meetings, messages, notes, and quick
+                Leadership work often moves through meetings, messages, notes, and quick
                 hallway conversations. WorkSync gives leaders one simple place to see what is open,
                 who is helping, what needs follow-up, and what has already been completed.
             </p>
@@ -143,11 +143,10 @@
         <h2 id="users-title">Who WorkSync Is For</h2>
 
         <ul class="target-user-list">
-            <li>Bishoprics and branch presidencies</li>
-            <li>Clerks and executive secretaries</li>
-            <li>Auxiliary presidencies</li>
-            <li>Work council members</li>
-            <li>Approved read-only users</li>
+            <li>Company Leadership</li>
+            <li>Managers</li>
+            <li>Team Leads</li>
+            <li>Employees</li>
         </ul>
     </section>
 </div>
@@ -157,13 +156,13 @@
     // Stores all assignments retrieved from the database.
     private List<AssignmentItem> assignments = new();
 
-    // Stores all callings retrieved from the database
-    private List<Calling> callings = new();
+    // Stores all workorders retrieved from the database
+    private List<Workorder> workorders = new();
 
     private int openAssignments; // Number of assignments with status "Open"
     private int completedAssignments; // Number of completed assignments
     private int overdueAssignments; // Number of assignments past due date
-    private int openCallings; // Number of open callings
+    private int openWorkorders; // Number of open workorders
 
     private bool ShowNotification { get; set; } // Controls whether the reminder popup is displayed
 
@@ -171,7 +170,7 @@
     private int PendingAssignments { get; set; }
     private int OverdueAssignments { get; set; }
     private int FollowUpsNeeded { get; set; }
-    private int OpenCallings { get; set; }
+    private int OpenWorkorders { get; set; }
 
     // User authentication and authorization flags
     private bool isSignedIn;
@@ -200,9 +199,9 @@
         isLeader = user.IsInRole("Leader");
         isViewer = user.IsInRole("Viewer");
 
-        // Load assignments and callings from the service.
+        // Load assignments and workorders from the service.
         assignments = await Service.GetAssignmentsAsync();
-        callings = await Service.GetCallingsAsync();
+        workorders = await Service.GetWorkordersAsync();
 
         // Calculate assignment statistics.
         openAssignments = assignments.Count(a => a.Status == "Open");
@@ -213,13 +212,13 @@
             a.DueDate < DateTime.Today &&
             a.Status != "Completed");
 
-        // Calculate number of open callings
-        openCallings = callings.Count(c => c.Status == "Open");
+        // Calculate number of open workorders
+        openWorkorders = workorders.Count(c => c.Status == "Open");
 
         // Set values used by the notification popup
         PendingAssignments = openAssignments;
         OverdueAssignments = overdueAssignments;
-        OpenCallings = openCallings;
+        OpenWorkorders = openWorkorders;
 
         // Placeholder for future follow-up tracking.
         FollowUpsNeeded = 0;
@@ -228,7 +227,7 @@
         ShowNotification =
             PendingAssignments > 0 ||
             OverdueAssignments > 0 ||
-            OpenCallings > 0 ||
+            OpenWorkorders > 0 ||
             FollowUpsNeeded > 0;
     }
 
@@ -255,10 +254,10 @@
     private static readonly List<FeatureCard> FeatureCards =
     [
         new(
-            "Track Callings",
-            "Keep calling status, organization, assigned member, and follow-up needs easy to review.",
+            "Track Workorders",
+            "Keep workorder status, department, assigned employee, and follow-up needs easy to review.",
             "feature-icon feature-icon-clipboard",
-            "/callings",
+            "/workorders",
             (isAdmin, _, _) => isAdmin),
         new(
             "Manage Assignments",
@@ -268,13 +267,13 @@
             (isAdmin, isLeader, _) => isAdmin || isLeader),
         new(
             "Track Follow-Up",
-            "See what needs attention and help work council members stay aligned on next steps.",
+            "See what needs attention and help team members stay aligned on next steps.",
             "feature-icon feature-icon-followup",
             "/followups",
             (isAdmin, isLeader, _) => isAdmin || isLeader),
         new(
             "View Reports",
-            "Review open callings, overdue assignments, and other summaries for leadership meetings.",
+            "Review open workorders, overdue assignments, and other summaries for leadership meetings.",
             "feature-icon feature-icon-report",
             "/reports",
             (isAdmin, isLeader, _) => isAdmin || isLeader)
@@ -300,7 +299,7 @@
                     <ul>
                         <li>@PendingAssignments pending assignments</li>
                         <li>@OverdueAssignments overdue assignments</li>
-                        <li>@OpenCallings open callings</li>
+                        <li>@OpenWorkorders open workorders</li>
                         <li>@FollowUpsNeeded follow-up items</li>
                     </ul>
 

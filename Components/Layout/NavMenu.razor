@@ -39,12 +39,12 @@
             </Authorized>
         </AuthorizeView>
 
-        @* Callings*@
+        @* Workorders*@
         <AuthorizeView Roles="Admin">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="callings">
-                        <span class="bi bi-callings-nav-menu" aria-hidden="true"></span> Callings
+                    <NavLink class="nav-link" href="workorders">
+                        <span class="bi bi-workorders-nav-menu" aria-hidden="true"></span> Workorders
                     </NavLink>
                 </div>
             </Authorized>
@@ -72,12 +72,12 @@
             </Authorized>
         </AuthorizeView>
 
-        @* Members *@
+        @* Employees *@
         <AuthorizeView Roles="Admin,Leader,Viewer">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="members">
-                        <span class="bi bi-members-nav-menu" aria-hidden="true"></span> Members
+                    <NavLink class="nav-link" href="employees">
+                        <span class="bi bi-members-nav-menu" aria-hidden="true"></span> Employees
                     </NavLink>
                 </div>
             </Authorized>
@@ -161,13 +161,6 @@
             </NotAuthorized>
         </AuthorizeView>
 
-        <p class="nav-section-label">System</p>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link nav-link-muted" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
-            </NavLink>
-        </div>
     </nav>
 </div>
 

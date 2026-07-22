@@ -18,8 +18,8 @@ public class CalendarExportService
         // Event description containing assignment details
         var description = EscapeText(
             $"Description: {assignment.Description}\\n" +
-            $"Assigned Leader: {assignment.AssignedLeader}\\n" +
-            $"Organization: {assignment.Organization}\\n" +
+            $"Assigned Owner: {assignment.AssignedOwner}\\n" +
+            $"Department: {assignment.Department}\\n" +
             $"Priority: {assignment.Priority}\\n" +
             $"Status: {assignment.Status}\\n" +
             $"Notes: {assignment.Notes}"

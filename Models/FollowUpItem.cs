@@ -8,15 +8,15 @@ public class FollowUpItem
 
     public string FollowUpItemTitle { get; set; } = "";
 
-    public string AssignedLeader { get; set; } = "";
+    public string AssignedOwner { get; set; } = "";
 
-    public string RelatedFamily { get; set; } = "";
+    public string RelatedProject { get; set; } = "";
 
     public DateTime DueDate { get; set; } = DateTime.Today.AddDays(7);
 
     public string Status { get; set; } = "Open";
 
-    public bool PrivacyFlag { get; set; }
+    public bool IsConfidential { get; set; }
 
     public string CompletionNotes { get; set; } = "";
 }

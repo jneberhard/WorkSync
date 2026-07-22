@@ -9,7 +9,7 @@
 <div class="report-header">
     <h1>Reports</h1>
     <p class="report-subtitle">
-        Track callings, assignments, and follow-up items across the work.
+        Track workorders, assignments, and follow-up items across the company.
         Use the filters to narrow every section at once.
     </p>
 </div>
@@ -17,23 +17,23 @@
 <div class="report-filters">
     <div class="report-filters-grid">
         <div class="report-filter">
-            <label class="form-label" for="organization-filter">Organization</label>
-            <InputSelect id="organization-filter" @bind-Value="organizationFilter">
-                <option value="">All Organizations</option>
-                @foreach (var organization in organizations)
+            <label class="form-label" for="department-filter">Department</label>
+            <InputSelect id="department-filter" @bind-Value="departmentFilter">
+                <option value="">All Departments</option>
+                @foreach (var department in departments)
                 {
-                    <option value="@organization">@organization</option>
+                    <option value="@department">@department</option>
                 }
             </InputSelect>
         </div>
 
         <div class="report-filter">
-            <label class="form-label" for="leader-filter">Leader</label>
-            <InputSelect id="leader-filter" @bind-Value="leaderFilter">
-                <option value="">All Leaders</option>
-                @foreach (var leader in leaders)
+            <label class="form-label" for="owner-filter">Owner</label>
+            <InputSelect id="owner-filter" @bind-Value="ownerFilter">
+                <option value="">All Owners</option>
+                @foreach (var owner in owners)
                 {
-                    <option value="@leader">@leader</option>
+                    <option value="@owner">@owner</option>
                 }
             </InputSelect>
         </div>
@@ -101,32 +101,32 @@
 @{
     // Snapshot computed properties once so each section uses the same filtered results
     // without re-evaluating the LINQ queries for every template reference below.
-    var openCallings = OpenCallings;
-    var callingsNeedingFollowUp = CallingsNeedingFollowUp;
-    var openAssignmentsByLeader = OpenAssignmentsByLeader;
+    var openWorkorders = OpenWorkorders;
+    var workordersNeedingFollowUp = WorkordersNeedingFollowUp;
+    var openAssignmentsByOwner = OpenAssignmentsByOwner;
     var overdueAssignments = OverdueAssignments;
     var completedAssignments = CompletedAssignments;
     var overdueFollowUps = OverdueFollowUps;
 }
 
 <nav class="report-nav" aria-label="Report sections">
-    <a href="#open-callings">Open Callings <span class="report-nav-count">@openCallings.Count</span></a>
-    <a href="#callings-follow-up">Needing Follow-Up <span class="report-nav-count">@callingsNeedingFollowUp.Count</span></a>
-    <a href="#assignments-by-leader">By Leader <span class="report-nav-count">@openAssignmentsByLeader.Sum(g => g.Value.Count)</span></a>
+    <a href="#open-workorders">Open Workorders <span class="report-nav-count">@openWorkorders.Count</span></a>
+    <a href="#workorders-follow-up">Needing Follow-Up <span class="report-nav-count">@workordersNeedingFollowUp.Count</span></a>
+    <a href="#assignments-by-owner">By Owner <span class="report-nav-count">@openAssignmentsByOwner.Sum(g => g.Value.Count)</span></a>
     <a href="#overdue-assignments">Overdue <span class="report-nav-count">@overdueAssignments.Count</span></a>
     <a href="#completed-assignments">Completed <span class="report-nav-count">@completedAssignments.Count</span></a>
     <a href="#overdue-follow-ups">Overdue Follow-Ups <span class="report-nav-count">@overdueFollowUps.Count</span></a>
 </nav>
 
-<section id="open-callings" class="report-section">
+<section id="open-workorders" class="report-section">
     <div class="report-section-header">
-        <h2>Open Callings</h2>
-        <span class="report-count">@openCallings.Count</span>
+        <h2>Open Workorders</h2>
+        <span class="report-count">@openWorkorders.Count</span>
     </div>
 
-    @if (openCallings.Count == 0)
+    @if (openWorkorders.Count == 0)
     {
-        <p class="report-empty">@EmptyMessage("open callings")</p>
+        <p class="report-empty">@EmptyMessage("open workorders")</p>
     }
     else
     {
@@ -135,15 +135,15 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Organization</th>
+                        <th>Department</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var calling in openCallings)
+                    @foreach (var workorder in openWorkorders)
                     {
                         <tr>
-                            <td>@calling.Title</td>
-                            <td>@calling.Organization</td>
+                            <td>@workorder.Title</td>
+                            <td>@workorder.Department</td>
                         </tr>
                     }
                 </tbody>
@@ -152,15 +152,15 @@
     }
 </section>
 
-<section id="callings-follow-up" class="report-section">
+<section id="workorders-follow-up" class="report-section">
     <div class="report-section-header">
-        <h2>Callings Needing Follow-Up</h2>
-        <span class="report-count">@callingsNeedingFollowUp.Count</span>
+        <h2>Workorders Needing Follow-Up</h2>
+        <span class="report-count">@workordersNeedingFollowUp.Count</span>
     </div>
 
-    @if (callingsNeedingFollowUp.Count == 0)
+    @if (workordersNeedingFollowUp.Count == 0)
     {
-        <p class="report-empty">@EmptyMessage("callings needing follow-up")</p>
+        <p class="report-empty">@EmptyMessage("workorders needing follow-up")</p>
     }
     else
     {
@@ -169,19 +169,19 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Organization</th>
-                        <th>Member Assigned</th>
+                        <th>Department</th>
+                        <th>Assigned Employee</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var calling in callingsNeedingFollowUp)
+                    @foreach (var workorder in workordersNeedingFollowUp)
                     {
                         <tr>
-                            <td>@calling.Title</td>
-                            <td>@calling.Organization</td>
-                            <td>@calling.MemberAssigned</td>
-                            <td><span class="@StatusBadgeClass(calling.Status)">@calling.Status</span></td>
+                            <td>@workorder.Title</td>
+                            <td>@workorder.Department</td>
+                            <td>@workorder.AssignedEmployee</td>
+                            <td><span class="@StatusBadgeClass(workorder.Status)">@workorder.Status</span></td>
                         </tr>
                     }
                 </tbody>
@@ -190,28 +190,28 @@
     }
 </section>
 
-<section id="assignments-by-leader" class="report-section">
+<section id="assignments-by-owner" class="report-section">
     <div class="report-section-header">
-        <h2>Assignments by Leader</h2>
-        <span class="report-count">@openAssignmentsByLeader.Sum(g => g.Value.Count)</span>
+        <h2>Assignments by Owner</h2>
+        <span class="report-count">@openAssignmentsByOwner.Sum(g => g.Value.Count)</span>
     </div>
 
-    @if (openAssignmentsByLeader.Count == 0)
+    @if (openAssignmentsByOwner.Count == 0)
     {
         <p class="report-empty">@EmptyMessage("open assignments")</p>
     }
     else
     {
-        @foreach (var group in openAssignmentsByLeader)
+        @foreach (var group in openAssignmentsByOwner)
         {
-            <div class="report-leader-group">
+            <div class="report-owner-group">
                 <h3>@group.Key <span class="report-count">@group.Value.Count</span></h3>
                 <div class="table-scroll">
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Title</th>
-                                <th>Organization</th>
+                                <th>Department</th>
                                 <th>Due Date</th>
                                 <th>Priority</th>
                                 <th>Status</th>
@@ -222,7 +222,7 @@
                             {
                                 <tr>
                                     <td>@item.Title</td>
-                                    <td>@item.Organization</td>
+                                    <td>@item.Department</td>
                                     <td class="@(item.DueDate < DateTime.Today ? "overdue-date" : null)">
                                         @item.DueDate.ToShortDateString()
                                     </td>
@@ -255,8 +255,8 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Leader</th>
-                        <th>Organization</th>
+                        <th>Owner</th>
+                        <th>Department</th>
                         <th>Due Date</th>
                         <th>Priority</th>
                     </tr>
@@ -266,8 +266,8 @@
                     {
                         <tr>
                             <td>@item.Title</td>
-                            <td>@item.AssignedLeader</td>
-                            <td>@item.Organization</td>
+                            <td>@item.AssignedOwner</td>
+                            <td>@item.Department</td>
                             <td class="overdue-date">@item.DueDate.ToShortDateString()</td>
                             <td><span class="@PriorityBadgeClass(item.Priority)">@item.Priority</span></td>
                         </tr>
@@ -295,8 +295,8 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Leader</th>
-                        <th>Organization</th>
+                        <th>Owner</th>
+                        <th>Department</th>
                         <th>Completion Date</th>
                     </tr>
                 </thead>
@@ -305,8 +305,8 @@
                     {
                         <tr>
                             <td>@item.Title</td>
-                            <td>@item.AssignedLeader</td>
-                            <td>@item.Organization</td>
+                            <td>@item.AssignedOwner</td>
+                            <td>@item.Department</td>
                             <td>@(item.CompletionDate.HasValue ? item.CompletionDate.Value.ToShortDateString() : "—")</td>
                         </tr>
                     }
@@ -333,8 +333,8 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Leader</th>
-                        <th>Related Family</th>
+                        <th>Owner</th>
+                        <th>Related Project</th>
                         <th>Due Date</th>
                     </tr>
                 </thead>
@@ -343,9 +343,9 @@
                     {
                         <tr>
                             <td>@item.FollowUpItemTitle</td>
-                            <td>@item.AssignedLeader</td>
-                            @* Hide the family name when the follow-up is marked confidential *@
-                            <td>@(item.PrivacyFlag ? "— Confidential —" : item.RelatedFamily)</td>
+                            <td>@item.AssignedOwner</td>
+                            @* Hide the project name when the follow-up is marked confidential. *@
+                            <td>@(item.IsConfidential ? "— Confidential —" : item.RelatedProject)</td>
                             <td class="overdue-date">@item.DueDate.ToShortDateString()</td>
                         </tr>
                     }
@@ -356,16 +356,16 @@
 </section>
 
 @code {
-    private List<Calling> callings = new();
+    private List<Workorder> workorders = new();
     private List<AssignmentItem> assignments = new();
     private List<FollowUpItem> followUps = new();
 
-    private List<string> organizations = new();
-    private List<string> leaders = new();
+    private List<string> departments = new();
+    private List<string> owners = new();
     private List<string> statuses = new();
 
-    private string organizationFilter = string.Empty;
-    private string leaderFilter = string.Empty;
+    private string departmentFilter = string.Empty;
+    private string ownerFilter = string.Empty;
     private string statusFilter = string.Empty;
     private DateTime? dueDateFrom;
     private DateTime? dueDateTo;
@@ -373,27 +373,27 @@
 
     protected override async Task OnInitializedAsync()
     {
-        callings = await Service.GetCallingsAsync();
+        workorders = await Service.GetWorkordersAsync();
         assignments = await Service.GetAssignmentsAsync();
         followUps = await Service.GetFollowUpsAsync();
 
         // Build filter dropdown options by merging distinct values from all data types.
-        // Organizations come from both callings and assignments; leaders from assignments and follow-ups.
-        organizations = callings.Select(c => c.Organization)
-            .Concat(assignments.Select(a => a.Organization))
+        // Departments come from both workorders and assignments; owners from assignments and follow-ups.
+        departments = workorders.Select(c => c.Department)
+            .Concat(assignments.Select(a => a.Department))
             .Where(o => !string.IsNullOrWhiteSpace(o))
             .Distinct()
             .OrderBy(o => o)
             .ToList();
 
-        leaders = assignments.Select(a => a.AssignedLeader)
-            .Concat(followUps.Select(f => f.AssignedLeader))
+        owners = assignments.Select(a => a.AssignedOwner)
+            .Concat(followUps.Select(f => f.AssignedOwner))
             .Where(l => !string.IsNullOrWhiteSpace(l))
             .Distinct()
             .OrderBy(l => l)
             .ToList();
 
-        statuses = callings.Select(c => c.Status)
+        statuses = workorders.Select(c => c.Status)
             .Concat(assignments.Select(a => a.Status))
             .Concat(followUps.Select(f => f.Status))
             .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -403,23 +403,23 @@
     }
 
     private bool HasActiveFilters =>
-        !string.IsNullOrEmpty(organizationFilter) ||
-        !string.IsNullOrEmpty(leaderFilter) ||
+        !string.IsNullOrEmpty(departmentFilter) ||
+        !string.IsNullOrEmpty(ownerFilter) ||
         !string.IsNullOrEmpty(statusFilter) ||
         dueDateFrom.HasValue ||
         dueDateTo.HasValue;
 
     private int ActiveFilterCount =>
-        (string.IsNullOrEmpty(organizationFilter) ? 0 : 1) +
-        (string.IsNullOrEmpty(leaderFilter) ? 0 : 1) +
+        (string.IsNullOrEmpty(departmentFilter) ? 0 : 1) +
+        (string.IsNullOrEmpty(ownerFilter) ? 0 : 1) +
         (string.IsNullOrEmpty(statusFilter) ? 0 : 1) +
         (dueDateFrom.HasValue ? 1 : 0) +
         (dueDateTo.HasValue ? 1 : 0);
 
     private void ClearFilters()
     {
-        organizationFilter = string.Empty;
-        leaderFilter = string.Empty;
+        departmentFilter = string.Empty;
+        ownerFilter = string.Empty;
         statusFilter = string.Empty;
         dueDateFrom = null;
         dueDateTo = null;
@@ -435,40 +435,40 @@
     private static string PriorityBadgeClass(string priority) =>
         "ws-badge badge-priority-" + priority.ToLowerInvariant();
 
-    // Callings have no leader or due date, so only the organization and status filters apply.
-    private IEnumerable<Calling> FilteredCallings =>
-        callings.Where(c =>
-            (string.IsNullOrEmpty(organizationFilter) || c.Organization == organizationFilter) &&
+    // Workorders have no owner or due date, so only the department and status filters apply.
+    private IEnumerable<Workorder> FilteredWorkorders =>
+        workorders.Where(c =>
+            (string.IsNullOrEmpty(departmentFilter) || c.Department == departmentFilter) &&
             (string.IsNullOrEmpty(statusFilter) || c.Status == statusFilter));
 
     private IEnumerable<AssignmentItem> FilteredAssignments =>
         assignments.Where(a =>
-            (string.IsNullOrEmpty(organizationFilter) || a.Organization == organizationFilter) &&
-            (string.IsNullOrEmpty(leaderFilter) || a.AssignedLeader == leaderFilter) &&
+            (string.IsNullOrEmpty(departmentFilter) || a.Department == departmentFilter) &&
+            (string.IsNullOrEmpty(ownerFilter) || a.AssignedOwner == ownerFilter) &&
             (string.IsNullOrEmpty(statusFilter) || a.Status == statusFilter) &&
             (!dueDateFrom.HasValue || a.DueDate.Date >= dueDateFrom.Value.Date) &&
             (!dueDateTo.HasValue || a.DueDate.Date <= dueDateTo.Value.Date));
 
-    // Follow-ups have no organization, so only the leader, status, and due date filters apply.
+    // Follow-ups have no department, so only the owner, status, and due date filters apply.
     private IEnumerable<FollowUpItem> FilteredFollowUps =>
         followUps.Where(f =>
-            (string.IsNullOrEmpty(leaderFilter) || f.AssignedLeader == leaderFilter) &&
+            (string.IsNullOrEmpty(ownerFilter) || f.AssignedOwner == ownerFilter) &&
             (string.IsNullOrEmpty(statusFilter) || f.Status == statusFilter) &&
             (!dueDateFrom.HasValue || f.DueDate.Date >= dueDateFrom.Value.Date) &&
             (!dueDateTo.HasValue || f.DueDate.Date <= dueDateTo.Value.Date));
 
-    private List<Calling> OpenCallings =>
-        FilteredCallings.Where(c => c.Status == "Open").ToList();
+    private List<Workorder> OpenWorkorders =>
+        FilteredWorkorders.Where(c => c.Status == "Open").ToList();
 
-    private List<Calling> CallingsNeedingFollowUp =>
-        FilteredCallings.Where(c => c.NeedsFollowUp).ToList();
+    private List<Workorder> WorkordersNeedingFollowUp =>
+        FilteredWorkorders.Where(c => c.NeedsFollowUp).ToList();
 
-    // Groups non-completed assignments by leader name, sorted alphabetically by leader
+    // Groups non-completed assignments by owner name, sorted alphabetically by owner
     // and then by due date within each group so the most urgent items appear first.
-    private Dictionary<string, List<AssignmentItem>> OpenAssignmentsByLeader =>
+    private Dictionary<string, List<AssignmentItem>> OpenAssignmentsByOwner =>
         FilteredAssignments
             .Where(a => a.Status != "Completed")
-            .GroupBy(a => a.AssignedLeader)
+            .GroupBy(a => a.AssignedOwner)
             .OrderBy(g => g.Key)
             .ToDictionary(g => g.Key, g => g.OrderBy(a => a.DueDate).ToList());
 
@@ -507,9 +507,9 @@
 
     private string BuildReportText()
     {
-        var openCallings = OpenCallings;
-        var callingsNeedingFollowUp = CallingsNeedingFollowUp;
-        var openAssignmentsByLeader = OpenAssignmentsByLeader;
+        var openWorkorders = OpenWorkorders;
+        var workordersNeedingFollowUp = WorkordersNeedingFollowUp;
+        var openAssignmentsByOwner = OpenAssignmentsByOwner;
         var overdueAssignments = OverdueAssignments;
         var completedAssignments = CompletedAssignments;
         var overdueFollowUps = OverdueFollowUps;
@@ -522,30 +522,30 @@
         report.AppendLine();
 
         report.AppendLine("Summary");
-        report.AppendLine($"- Open callings: {openCallings.Count}");
-        report.AppendLine($"- Callings needing follow-up: {callingsNeedingFollowUp.Count}");
-        report.AppendLine($"- Open assignments: {openAssignmentsByLeader.Sum(g => g.Value.Count)}");
+        report.AppendLine($"- Open workorders: {openWorkorders.Count}");
+        report.AppendLine($"- Workorders needing follow-up: {workordersNeedingFollowUp.Count}");
+        report.AppendLine($"- Open assignments: {openAssignmentsByOwner.Sum(g => g.Value.Count)}");
         report.AppendLine($"- Overdue assignments: {overdueAssignments.Count}");
         report.AppendLine($"- Completed assignments: {completedAssignments.Count}");
         report.AppendLine($"- Overdue follow-up items: {overdueFollowUps.Count}");
         report.AppendLine();
 
-        AppendCallingSection(report, "Open Callings", openCallings);
-        AppendCallingSection(report, "Callings Needing Follow-Up", callingsNeedingFollowUp);
+        AppendWorkorderSection(report, "Open Workorders", openWorkorders);
+        AppendWorkorderSection(report, "Workorders Needing Follow-Up", workordersNeedingFollowUp);
 
-        report.AppendLine("Assignments by Leader");
-        if (openAssignmentsByLeader.Count == 0)
+        report.AppendLine("Assignments by Owner");
+        if (openAssignmentsByOwner.Count == 0)
         {
             report.AppendLine("- None");
         }
         else
         {
-            foreach (var group in openAssignmentsByLeader)
+            foreach (var group in openAssignmentsByOwner)
             {
                 report.AppendLine($"- {group.Key}: {group.Value.Count}");
                 foreach (var item in group.Value)
                 {
-                    report.AppendLine($"  - {item.Title} | {item.Organization} | Due {item.DueDate:d} | {item.Priority} | {item.Status}");
+                    report.AppendLine($"  - {item.Title} | {item.Department} | Due {item.DueDate:d} | {item.Priority} | {item.Status}");
                 }
             }
         }
@@ -563,9 +563,9 @@
         {
             foreach (var item in overdueFollowUps)
             {
-                // Keep private family names out of exported reports too.
-                var family = item.PrivacyFlag ? "Confidential" : item.RelatedFamily;
-                report.AppendLine($"- {item.FollowUpItemTitle} | {item.AssignedLeader} | {family} | Due {item.DueDate:d}");
+                // Keep private project names out of exported reports too.
+                var project = item.IsConfidential ? "Confidential" : item.RelatedProject;
+                report.AppendLine($"- {item.FollowUpItemTitle} | {item.AssignedOwner} | {project} | Due {item.DueDate:d}");
             }
         }
 
@@ -583,14 +583,14 @@
 
             var filters = new List<string>();
 
-            if (!string.IsNullOrEmpty(organizationFilter))
+            if (!string.IsNullOrEmpty(departmentFilter))
             {
-                filters.Add($"Organization: {organizationFilter}");
+                filters.Add($"Department: {departmentFilter}");
             }
 
-            if (!string.IsNullOrEmpty(leaderFilter))
+            if (!string.IsNullOrEmpty(ownerFilter))
             {
-                filters.Add($"Leader: {leaderFilter}");
+                filters.Add($"Owner: {ownerFilter}");
             }
 
             if (!string.IsNullOrEmpty(statusFilter))
@@ -612,7 +612,7 @@
         }
     }
 
-    private static void AppendCallingSection(System.Text.StringBuilder report, string title, List<Calling> items)
+    private static void AppendWorkorderSection(System.Text.StringBuilder report, string title, List<Workorder> items)
     {
         report.AppendLine(title);
 
@@ -624,7 +624,7 @@
         {
             foreach (var item in items)
             {
-                report.AppendLine($"- {item.Title} | {item.Organization} | {item.Status}");
+                report.AppendLine($"- {item.Title} | {item.Department} | {item.Status}");
             }
         }
 
@@ -643,7 +643,7 @@
         {
             foreach (var item in items)
             {
-                report.AppendLine($"- {item.Title} | {item.AssignedLeader} | {item.Organization} | Due {item.DueDate:d} | {item.Status}");
+                report.AppendLine($"- {item.Title} | {item.AssignedOwner} | {item.Department} | Due {item.DueDate:d} | {item.Status}");
             }
         }
 

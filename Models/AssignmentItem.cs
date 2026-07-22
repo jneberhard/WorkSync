@@ -17,15 +17,15 @@ public class AssignmentItem
     [StringLength(500)]
     public string Description { get; set; } = "";
 
-    // Leader responsible for completing the assignment
-    [Required(ErrorMessage = "Assigned leader is required.")]
+    // Owner responsible for completing the assignment
+    [Required(ErrorMessage = "Assigned owner is required.")]
     [StringLength(100)]
-    public string AssignedLeader { get; set; } = "";
+    public string AssignedOwner { get; set; } = "";
 
-    // Organization or auxiliary responsible for the assignment
-    [Required(ErrorMessage = "Organization is required.")]
+    // Department responsible for the assignment
+    [Required(ErrorMessage = "Department is required.")]
     [StringLength(100)]
-    public string Organization { get; set; } = "";
+    public string Department { get; set; } = "";
 
     // Date by which the assignment should be completed
     [Required(ErrorMessage = "Due date is required.")]

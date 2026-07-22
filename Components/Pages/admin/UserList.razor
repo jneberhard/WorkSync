@@ -9,11 +9,11 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole> RoleManager
 
-<PageTitle>Active User Roster | WorkSync</PageTitle>
+<PageTitle>User Directory | WorkSync</PageTitle>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="text-dark font-weight-bold m-0">Active User Roster</h1>
+        <h1 class="text-dark font-weight-bold m-0">User Directory</h1>
         <a href="Admin/ManageUsers" class="btn btn-outline-primary roster-approval-link rounded-3 fw-semibold">
             <i class="bi bi-person-plus-fill me-1"></i> View Pending Approvals
         </a>
@@ -39,7 +39,7 @@
     {
         <div class="d-flex justify-content-center my-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading system roster...</span>
+                <span class="visually-hidden">Loading user directory...</span>
             </div>
         </div>
     }

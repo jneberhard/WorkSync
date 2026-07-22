@@ -18,11 +18,11 @@ else
         <h2>@followUp.FollowUpItemTitle</h2>
 
         <p><strong>Meeting Date:</strong> @followUp.MeetingDate.ToShortDateString()</p>
-        <p><strong>Assigned Leader:</strong> @followUp.AssignedLeader</p>
-        <p><strong>Related Family:</strong> @followUp.RelatedFamily</p>
+        <p><strong>Assigned Owner:</strong> @followUp.AssignedOwner</p>
+        <p><strong>Related Project:</strong> @followUp.RelatedProject</p>
         <p><strong>Due Date:</strong> @followUp.DueDate.ToShortDateString()</p>
         <p><strong>Status:</strong> @followUp.Status</p>
-        <p><strong>Private:</strong> @(followUp.PrivacyFlag ? "Yes" : "No")</p>
+        <p><strong>Confidential:</strong> @(followUp.IsConfidential ? "Yes" : "No")</p>
         <p><strong>Completion Notes:</strong> @followUp.CompletionNotes</p>
     </div>
 
@@ -45,7 +45,7 @@ else
 
         var selectedFollowUp = await Service.GetFollowUpByIdAsync(Id);
 
-        if (selectedFollowUp is null || selectedFollowUp.PrivacyFlag && !isAdmin)
+        if (selectedFollowUp is null || selectedFollowUp.IsConfidential && !isAdmin)
         {
             followUp = null;
             return;

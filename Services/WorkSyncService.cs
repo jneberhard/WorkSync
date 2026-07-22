@@ -5,53 +5,53 @@ using WorkSync.Models;
 namespace WorkSync.Services;
 
 // Service class responsible for handling all database operations
-// related to Callings, Assignments, Follow-Ups, and Members.
+// related to Workorders, Assignments, Follow-Ups, and Members.
 public class WorkSyncService(ApplicationDbContext db)
 {
     // =========================
-    // CALLINGS CRUD
+    // WORKORDERS CRUD
     // =========================
 
-    // Retrieve all callings from the database
-    public Task<List<Calling>> GetCallingsAsync() =>
-        db.Callings.ToListAsync();
+    // Retrieve all workorders from the database
+    public Task<List<Workorder>> GetWorkordersAsync() =>
+        db.Workorders.ToListAsync();
 
-    // Add a new calling
-    public async Task AddCallingAsync(Calling calling)
+    // Add a new workorder
+    public async Task AddWorkorderAsync(Workorder workorder)
     {
-        db.Callings.Add(calling);
+        db.Workorders.Add(workorder);
         await db.SaveChangesAsync();
     }
 
-    // Update an existing calling
-    public async Task UpdateCallingAsync(Calling calling)
+    // Update an existing workorder
+    public async Task UpdateWorkorderAsync(Workorder workorder)
     {
-        var existingCalling = await db.Callings.FindAsync(calling.Id);
+        var existingWorkorder = await db.Workorders.FindAsync(workorder.Id);
 
-        if (existingCalling != null)
+        if (existingWorkorder != null)
         {
-            existingCalling.Title = calling.Title;
-            existingCalling.Organization = calling.Organization;
-            existingCalling.MemberAssigned = calling.MemberAssigned;
-            existingCalling.Status = calling.Status;
-            existingCalling.NeedsFollowUp = calling.NeedsFollowUp;
-            existingCalling.DateExtended = calling.DateExtended;
-            existingCalling.DateSustained = calling.DateSustained;
-            existingCalling.DateReleased = calling.DateReleased;
-            existingCalling.Notes = calling.Notes;
+            existingWorkorder.Title = workorder.Title;
+            existingWorkorder.Department = workorder.Department;
+            existingWorkorder.AssignedEmployee = workorder.AssignedEmployee;
+            existingWorkorder.Status = workorder.Status;
+            existingWorkorder.NeedsFollowUp = workorder.NeedsFollowUp;
+            existingWorkorder.CreatedDate = workorder.CreatedDate;
+            existingWorkorder.DueDate = workorder.DueDate;
+            existingWorkorder.CompletedDate = workorder.CompletedDate;
+            existingWorkorder.Notes = workorder.Notes;
 
             await db.SaveChangesAsync();
         }
     }
 
-    // Delete a calling by ID
-    public async Task DeleteCallingAsync(int id)
+    // Delete a workorder by ID
+    public async Task DeleteWorkorderAsync(int id)
     {
-        var calling = await db.Callings.FindAsync(id);
+        var workorder = await db.Workorders.FindAsync(id);
 
-        if (calling != null)
+        if (workorder != null)
         {
-            db.Callings.Remove(calling);
+            db.Workorders.Remove(workorder);
             await db.SaveChangesAsync();
         }
     }
@@ -87,8 +87,8 @@ public class WorkSyncService(ApplicationDbContext db)
         {
             existingAssignment.Title = assignment.Title;
             existingAssignment.Description = assignment.Description;
-            existingAssignment.AssignedLeader = assignment.AssignedLeader;
-            existingAssignment.Organization = assignment.Organization;
+            existingAssignment.AssignedOwner = assignment.AssignedOwner;
+            existingAssignment.Department = assignment.Department;
             existingAssignment.DueDate = assignment.DueDate;
             existingAssignment.Priority = assignment.Priority;
             existingAssignment.Status = assignment.Status;
@@ -141,11 +141,11 @@ public class WorkSyncService(ApplicationDbContext db)
         {
             existingFollowUp.MeetingDate = followUp.MeetingDate;
             existingFollowUp.FollowUpItemTitle = followUp.FollowUpItemTitle;
-            existingFollowUp.AssignedLeader = followUp.AssignedLeader;
-            existingFollowUp.RelatedFamily = followUp.RelatedFamily;
+            existingFollowUp.AssignedOwner = followUp.AssignedOwner;
+            existingFollowUp.RelatedProject = followUp.RelatedProject;
             existingFollowUp.DueDate = followUp.DueDate;
             existingFollowUp.Status = followUp.Status;
-            existingFollowUp.PrivacyFlag = followUp.PrivacyFlag;
+            existingFollowUp.IsConfidential = followUp.IsConfidential;
             existingFollowUp.CompletionNotes = followUp.CompletionNotes;
 
             await db.SaveChangesAsync();
@@ -194,8 +194,8 @@ public class WorkSyncService(ApplicationDbContext db)
             existingMember.LastName = member.LastName;
             existingMember.Email = member.Email;
             existingMember.Phone = member.Phone;
-            existingMember.Organization = member.Organization;
-            existingMember.CurrentCalling = member.CurrentCalling;
+            existingMember.Department = member.Department;
+            existingMember.CurrentWorkorder = member.CurrentWorkorder;
             existingMember.AvailabilityNotes = member.AvailabilityNotes;
             existingMember.ActiveStatus = member.ActiveStatus;
 

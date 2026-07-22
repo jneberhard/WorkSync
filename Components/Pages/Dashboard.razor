@@ -25,8 +25,8 @@
     </div>
 
     <div class="card">
-        <h3>Open Callings</h3>
-        <p class="stat">@openCallings</p>
+        <h3>Open Workorders</h3>
+        <p class="stat">@openWorkorders</p>
     </div>
 
 </div>
@@ -39,20 +39,20 @@
     </div>
 
     <div class="card chart-card">
-        <h3>Callings by Status</h3>
-        @RenderDonut(callingSegments)
+        <h3>Workorders by Status</h3>
+        @RenderDonut(workorderSegments)
     </div>
 
     <div class="card chart-card">
-        <h3>Assignments by Organization</h3>
-        @if (organizationCounts.Count == 0)
+        <h3>Assignments by Department</h3>
+        @if (departmentCounts.Count == 0)
         {
             <p class="chart-empty">No data yet.</p>
         }
         else
         {
             <div class="bar-chart">
-                @foreach (var org in organizationCounts)
+                @foreach (var org in departmentCounts)
                 {
                     <div class="bar-row">
                         <span class="bar-label" title="@org.Key">@org.Key</span>
@@ -75,7 +75,7 @@
     <thead>
         <tr>
             <th>Title</th>
-            <th>Leader</th>
+            <th>Owner</th>
             <th>Due Date</th>
             <th>Status</th>
         </tr>
@@ -86,7 +86,7 @@
         {
             <tr>
                 <td>@assignment.Title</td>
-                <td>@assignment.AssignedLeader</td>
+                <td>@assignment.AssignedOwner</td>
                 <td>@assignment.DueDate.ToShortDateString()</td>
                 <td>@assignment.Status</td>
             </tr>
@@ -96,21 +96,21 @@
 
 @code {
 
-    // Stores assignment and calling data retrieved from the database
+    // Stores assignment and workorder data retrieved from the database
     private List<AssignmentItem> assignments = new();
-    private List<Calling> callings = new();
+    private List<Workorder> workorders = new();
 
     // Dashboard summary statistics
     private int openAssignments;
     private int completedAssignments;
     private int overdueAssignments;
-    private int openCallings;
+    private int openWorkorders;
 
     // Data used by dashboard charts
     private List<ChartSegment> assignmentSegments = new();
-    private List<ChartSegment> callingSegments = new();
-    private List<KeyValuePair<string, int>> organizationCounts = new();
-    private int maxOrganizationCount;
+    private List<ChartSegment> workorderSegments = new();
+    private List<KeyValuePair<string, int>> departmentCounts = new();
+    private int maxDepartmentCount;
 
     // Represents a chart segment with a label, value, and display color
     private record ChartSegment(string Label, int Count, string Color);
@@ -119,7 +119,7 @@
     protected override async Task OnInitializedAsync()
     {
         assignments = await Service.GetAssignmentsAsync();
-        callings = await Service.GetCallingsAsync();
+        workorders = await Service.GetWorkordersAsync();
 
         // Calculate assignment statistics
         openAssignments = assignments.Count(a => a.Status == "Open");
@@ -128,8 +128,8 @@
             a.DueDate < DateTime.Today &&
             a.Status != "Completed");
 
-        // Calculate calling statistics
-        openCallings = callings.Count(c => c.Status == "Open");
+        // Calculate workorder statistics
+        openWorkorders = workorders.Count(c => c.Status == "Open");
 
         // Build assignment status chart data
         assignmentSegments = new List<ChartSegment>
@@ -139,32 +139,32 @@
             new("Completed", completedAssignments, "var(--ws-green)")
         };
 
-        // Build calling status chart data
-        callingSegments = new List<ChartSegment>
+        // Build workorder status chart data
+        workorderSegments = new List<ChartSegment>
         {
-            new("Open", openCallings, "var(--ws-blue)"),
-            new("Filled", callings.Count(c => c.Status == "Filled"), "var(--ws-green)"),
-            new("Released", callings.Count(c => c.Status == "Released"), "var(--ws-navy)")
+            new("Open", openWorkorders, "var(--ws-blue)"),
+            new("In Progress", workorders.Count(c => c.Status == "In Progress"), "var(--ws-green)"),
+            new("Completed", workorders.Count(c => c.Status == "Completed"), "var(--ws-navy)")
         };
 
-        // Group assignments by organization for bar chart display
-        organizationCounts = assignments
-            .GroupBy(a => a.Organization)
+        // Group assignments by department for bar chart display
+        departmentCounts = assignments
+            .GroupBy(a => a.Department)
             .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
             .OrderByDescending(kv => kv.Value)
             .ToList();
 
-        // Determine largest organization count for scaling bar widths
-        maxOrganizationCount = organizationCounts.Count > 0
-            ? organizationCounts.Max(kv => kv.Value)
+        // Determine largest department count for scaling bar widths
+        maxDepartmentCount = departmentCounts.Count > 0
+            ? departmentCounts.Max(kv => kv.Value)
             : 0;
     }
 
     // Calculate bar chart width as a percentage of the largest value
     private string BarWidth(int count) =>
-        maxOrganizationCount == 0
+        maxDepartmentCount == 0
             ? "0"
-            : (count * 100.0 / maxOrganizationCount)
+            : (count * 100.0 / maxDepartmentCount)
                 .ToString("F1", CultureInfo.InvariantCulture);
 
     // Render a donut chart using SVG graphics

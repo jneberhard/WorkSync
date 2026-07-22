@@ -24,13 +24,13 @@ These accounts are for demonstration and testing only.
 
 ## Overview
 
-WorkSync is a church leadership app designed for work and branch leaders to organize callings, assignments, members, reports, service needs, and follow-up tasks in one place. Leaders can track who is assigned, what needs to be done, due dates, progress, notes, and completion status.
+WorkSync is a company meeting and work-tracking app that helps leaders and teams organize workorders, assignments, employees, reports, and follow-up tasks in one place. Teams can track ownership, due dates, progress, meeting decisions, notes, and completion status.
 
-The goal is to help bishoprics, branch presidencies, auxiliary leaders, and work councils keep important responsibilities from getting lost in text messages, meeting notes, or memory. WorkSync is not meant to replace official Church tools. It is a class project built to practice .NET web development, team collaboration, authentication, CRUD functionality, reporting, and accessibility improvements.
+The goal is to keep decisions and action items from getting lost in messages, meeting notes, spreadsheets, or memory. WorkSync is a class project adapted into a company-focused workflow for practicing .NET web development, team collaboration, authentication, CRUD functionality, reporting, and accessibility improvements.
 
 ## The Problem It Solves
 
-In a work or branch, leaders often manage many moving pieces at the same time. There may be callings, releases, sustaining dates, service needs, youth activities, ministering follow-up items, interviews, meeting action items, and assignments from work council.
+Company leaders often manage many projects and commitments at the same time. Workorders, meeting action items, assignments, deadlines, and follow-up discussions can easily become disconnected across tools.
 
 It is easy for something important to get missed if it only lives in a text thread, notebook, spreadsheet, or someone’s memory. WorkSync gives leaders a simple place to see what is open, who is assigned, what is overdue, and what has already been completed.
 
@@ -38,10 +38,10 @@ It is easy for something important to get missed if it only lives in a text thre
 
 * Role-based login and navigation
 * Dashboard overview
-* Callings tracking
+* Workorders tracking
 * Assignments tracking
 * Follow-up tracking
-* Members CRUD
+* Employee directory CRUD
 * Reports page
 * Report copy/download export
 * Viewer read-only access where needed
@@ -54,15 +54,15 @@ WorkSync uses role-based access so users only see the areas they are allowed to 
 
 ### Admin
 
-Admins have the highest level of access. They can manage users, view reports, manage members, and access private or administrative information.
+Admins have the highest level of access. They can manage users, view reports, manage employees, and access confidential or administrative information.
 
 ### Leader
 
-Leaders can manage the main work/branch work areas, including callings, assignments, follow-ups, members, and reports.
+Leaders can manage workorders, assignments, meeting follow-ups, employees, and reports.
 
 ### Viewer
 
-Viewers can view allowed information but do not have full editing permissions. For example, Viewers can see the Members page, but they cannot add, edit, delete, or view private member status information.
+Viewers can view allowed information but do not have full editing permissions. For example, Viewers can see the Employees page, but they cannot add, edit, delete, or view restricted employee status information.
 
 ## Web Pages
 
@@ -76,42 +76,42 @@ The Home page is the main landing page. Guests can see the main features of the 
 
 The Dashboard gives users a quick overview of important items, such as open, completed, and overdue work.
 
-### Callings
+### Workorders
 
-The Callings page is used to manage and track work or branch callings. Users can view calling records, track status, add notes, and manage calling details.
+The Workorders page tracks requests and operational work from creation through completion. Users can assign an employee, department, due date, status, notes, and follow-up requirement.
 
 ### Assignments
 
-The Assignments page is used to manage responsibilities assigned to leaders or members. Users can track assignment titles, descriptions, due dates, assigned leaders, priority, status, notes, and completion information.
+The Assignments page manages action items assigned during meetings. Users can track titles, descriptions, owners, departments, due dates, priorities, statuses, notes, and completion information.
 
 ### Follow-Ups
 
-The Follow-Ups page is used to track ongoing action items from meetings, leadership discussions, or service needs. Follow-up items can include an assigned leader, due date, status, related family or household, and completion notes.
+The Follow-Ups page tracks action items from meetings and project discussions. Follow-up items include an owner, related project or meeting topic, due date, status, confidentiality setting, and completion notes.
 
-Private follow-ups are limited so they are not shown to users who should not have access.
+Confidential follow-ups are limited so they are not shown to users who should not have access.
 
-### Members
+### Employees
 
-The Members page is used to manage member information. Admin and Leader users can add, edit, and delete members. Viewer users can view the member list but cannot add, edit, delete, or view member status information.
+The Employees page is used to manage employee contact and assignment information. Admin and Leader users can add, edit, and delete employees. Viewer users can view the directory but cannot modify records or view restricted status information.
 
-Member fields include:
+Employee fields include:
 
 * First Name
 * Last Name
 * Email
 * Phone
-* Organization
-* Current Calling
+* Department
+* Current Workorder
 * Availability Notes
 * Active Status
 
-The Members page also includes email validation so blank or invalid emails do not save.
+The Employees page also includes email validation so blank or invalid emails do not save.
 
 ### Reports
 
-The Reports page provides summaries from the system data. Users can view report information about assignments, callings, follow-ups, and members. The Reports page also includes a simple export feature that allows users to copy or download report text.
+The Reports page summarizes workorders, assignments, meeting follow-ups, and employees. It also provides filters and a simple export feature for copying or downloading report text.
 
-Private family information is masked as confidential in exported reports.
+Confidential project information is masked in exported reports.
 
 ### Registration
 
@@ -255,7 +255,7 @@ Blazor was used to build the user interface with reusable components and C# code
 
 ### Entity Framework Core
 
-Entity Framework Core is used for database access and migrations. It connects the app to PostgreSQL and allows the app to work with models such as Members, Assignments, Callings, and Follow-Ups.
+Entity Framework Core is used for database access and migrations. It connects the app to PostgreSQL and supports employee records, assignments, workorders, and meeting follow-ups.
 
 ### PostgreSQL and Neon
 
@@ -293,14 +293,14 @@ Users can review:
 * Overdue items
 * Quick links to important pages
 
-### Managing Callings
+### Managing Workorders
 
-To manage callings:
+To manage workorders:
 
-1. Open the Callings page.
-2. Review the list of callings.
-3. Add, edit, or delete calling records if your role has access.
-4. Use status and notes to keep calling information updated.
+1. Open the Workorders page.
+2. Review the list of workorders.
+3. Add, edit, or delete workorder records if your role has access.
+4. Use status and notes to keep workorder information updated.
 
 ### Managing Assignments
 
@@ -320,22 +320,22 @@ To manage follow-ups:
 1. Open the Follow-Ups page.
 2. Review open follow-up items.
 3. Create a new follow-up item.
-4. Assign a leader and due date.
+4. Assign an owner and due date.
 5. Update the status as progress is made.
-6. Use private follow-ups only when the item should be limited.
+6. Mark sensitive follow-ups confidential when access should be limited.
 
-### Managing Members
+### Managing Employees
 
-To manage members:
+To manage employees:
 
-1. Open the Members page.
-2. View the member list.
+1. Open the Employees page.
+2. View the employee directory.
 3. Use search or filters if needed.
-4. Add a member if your role has access.
-5. Edit member information if needed.
-6. Delete a member only after confirming through the delete modal.
+4. Add an employee if your role has access.
+5. Edit employee information if needed.
+6. Delete an employee only after confirming through the delete modal.
 
-Viewer users can view the member list but cannot add, edit, delete, or view private member status.
+Viewer users can view the employee directory but cannot add, edit, delete, or view restricted employee status.
 
 ### Viewing Reports
 

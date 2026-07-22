@@ -25,7 +25,7 @@ html,
 body {
     min-height: 100%;
     margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
+    font-project: Arial, Helvetica, sans-serif;
     background: var(--ws-gray-100);
     color: var(--ws-gray-800);
 }
@@ -1048,7 +1048,7 @@ input[type="date"] {
 }
 
 textarea {
-    font-family: inherit;
+    font-project: inherit;
     resize: vertical;
 }
 
@@ -1469,11 +1469,11 @@ textarea {
     font-weight: 800;
 }
 
-.report-leader-group {
+.report-owner-group {
     margin-bottom: 1.25rem;
 }
 
-.report-leader-group h3 {
+.report-owner-group h3 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1481,7 +1481,7 @@ textarea {
     font-size: 1.05rem;
 }
 
-.report-leader-group .report-count {
+.report-owner-group .report-count {
     background: var(--ws-gray-600);
 }
 
@@ -1562,7 +1562,7 @@ textarea {
     background: #8b1a12;
 }
 
-.role-badge-leader {
+.role-badge-owner {
     background: var(--ws-blue-dark);
 }
 

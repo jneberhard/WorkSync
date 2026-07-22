@@ -12,9 +12,9 @@ public class Member
 
     public string Phone { get; set; } = "";
 
-    public string Organization { get; set; } = "";
+    public string Department { get; set; } = "";
 
-    public string CurrentCalling { get; set; } = "";
+    public string CurrentWorkorder { get; set; } = "";
 
     public string AvailabilityNotes { get; set; } = "";
 
