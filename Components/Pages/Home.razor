@@ -231,11 +231,10 @@
             FollowUpsNeeded > 0;
     }
 
-    // Hides the notification popup and refreshes the UI
-    private async Task CloseNotification()
+    // Hides the notification popup. Blazor re-renders after the click event completes.
+    private void CloseNotification()
     {
         ShowNotification = false;
-        await InvokeAsync(StateHasChanged);
     }
 
     // Defines a dashboard feature card.
@@ -304,8 +303,9 @@
                     </ul>
 
                     <!-- Closes the popup when clicked -->
-                    <button class="btn btn-primary"
-                            @onclick="() => ShowNotification = false">
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="CloseNotification">
                         OK
                     </button>
                 </div>
