@@ -3,6 +3,7 @@ namespace WorkSync.Models;
 public class FollowUpItem
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     public DateTime MeetingDate { get; set; } = DateTime.Today;
 

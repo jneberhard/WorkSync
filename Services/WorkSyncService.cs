@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WorkSync.Data;
 using WorkSync.Models;
@@ -6,19 +8,41 @@ namespace WorkSync.Services;
 
 // Service class responsible for handling all database operations
 // related to Workorders, Assignments, Follow-Ups, and Members.
-public class WorkSyncService(ApplicationDbContext db)
+public class WorkSyncService(
+    ApplicationDbContext db,
+    AuthenticationStateProvider authenticationStateProvider,
+    UserManager<ApplicationUser> userManager,
+    IHttpContextAccessor httpContextAccessor)
 {
+    private async Task<int> GetTenantIdAsync()
+    {
+        var user = httpContextAccessor.HttpContext?.User ??
+            (await authenticationStateProvider.GetAuthenticationStateAsync()).User;
+        var applicationUser = await userManager.GetUserAsync(user);
+
+        if (applicationUser?.TenantId is not int tenantId)
+        {
+            throw new UnauthorizedAccessException("A tenant is required for this operation.");
+        }
+
+        return tenantId;
+    }
+
     // =========================
     // WORKORDERS CRUD
     // =========================
 
     // Retrieve all workorders from the database
-    public Task<List<Workorder>> GetWorkordersAsync() =>
-        db.Workorders.ToListAsync();
+    public async Task<List<Workorder>> GetWorkordersAsync()
+    {
+        var tenantId = await GetTenantIdAsync();
+        return await db.Workorders.Where(item => item.TenantId == tenantId).ToListAsync();
+    }
 
     // Add a new workorder
     public async Task AddWorkorderAsync(Workorder workorder)
     {
+        workorder.TenantId = await GetTenantIdAsync();
         db.Workorders.Add(workorder);
         await db.SaveChangesAsync();
     }
@@ -26,7 +50,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Update an existing workorder
     public async Task UpdateWorkorderAsync(Workorder workorder)
     {
-        var existingWorkorder = await db.Workorders.FindAsync(workorder.Id);
+        var tenantId = await GetTenantIdAsync();
+        var existingWorkorder = await db.Workorders
+            .SingleOrDefaultAsync(item => item.Id == workorder.Id && item.TenantId == tenantId);
 
         if (existingWorkorder != null)
         {
@@ -47,7 +73,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Delete a workorder by ID
     public async Task DeleteWorkorderAsync(int id)
     {
-        var workorder = await db.Workorders.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        var workorder = await db.Workorders
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
 
         if (workorder != null)
         {
@@ -62,18 +90,24 @@ public class WorkSyncService(ApplicationDbContext db)
     // =========================
 
     // Retrieve all assignments
-    public Task<List<AssignmentItem>> GetAssignmentsAsync() =>
-        db.Assignments.ToListAsync();
+    public async Task<List<AssignmentItem>> GetAssignmentsAsync()
+    {
+        var tenantId = await GetTenantIdAsync();
+        return await db.Assignments.Where(item => item.TenantId == tenantId).ToListAsync();
+    }
 
     // Retrieve a single assignment by ID
     public async Task<AssignmentItem?> GetAssignmentByIdAsync(int id)
     {
-        return await db.Assignments.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        return await db.Assignments
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
     }
 
     // Add a new assignment
     public async Task AddAssignmentAsync(AssignmentItem assignment)
     {
+        assignment.TenantId = await GetTenantIdAsync();
         db.Assignments.Add(assignment);
         await db.SaveChangesAsync();
     }
@@ -81,7 +115,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Update an existing assignment
     public async Task UpdateAssignmentAsync(AssignmentItem assignment)
     {
-        var existingAssignment = await db.Assignments.FindAsync(assignment.Id);
+        var tenantId = await GetTenantIdAsync();
+        var existingAssignment = await db.Assignments
+            .SingleOrDefaultAsync(item => item.Id == assignment.Id && item.TenantId == tenantId);
 
         if (existingAssignment != null)
         {
@@ -102,7 +138,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Delete an assignment by ID
     public async Task DeleteAssignmentAsync(int id)
     {
-        var assignment = await db.Assignments.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        var assignment = await db.Assignments
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
 
         if (assignment != null)
         {
@@ -116,18 +154,24 @@ public class WorkSyncService(ApplicationDbContext db)
     // =========================
 
     // Retrieve all follow-up items
-    public Task<List<FollowUpItem>> GetFollowUpsAsync() =>
-        db.FollowUpItems.ToListAsync();
+    public async Task<List<FollowUpItem>> GetFollowUpsAsync()
+    {
+        var tenantId = await GetTenantIdAsync();
+        return await db.FollowUpItems.Where(item => item.TenantId == tenantId).ToListAsync();
+    }
 
     // Retrieve a follow-up item by ID
     public async Task<FollowUpItem?> GetFollowUpByIdAsync(int id)
     {
-        return await db.FollowUpItems.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        return await db.FollowUpItems
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
     }
 
     // Add a new follow-up item
     public async Task AddFollowUpAsync(FollowUpItem followUp)
     {
+        followUp.TenantId = await GetTenantIdAsync();
         db.FollowUpItems.Add(followUp);
         await db.SaveChangesAsync();
     }
@@ -135,7 +179,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Update an existing follow-up item
     public async Task UpdateFollowUpAsync(FollowUpItem followUp)
     {
-        var existingFollowUp = await db.FollowUpItems.FindAsync(followUp.Id);
+        var tenantId = await GetTenantIdAsync();
+        var existingFollowUp = await db.FollowUpItems
+            .SingleOrDefaultAsync(item => item.Id == followUp.Id && item.TenantId == tenantId);
 
         if (existingFollowUp != null)
         {
@@ -155,7 +201,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Delete a follow-up item by ID
     public async Task DeleteFollowUpAsync(int id)
     {
-        var followUp = await db.FollowUpItems.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        var followUp = await db.FollowUpItems
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
 
         if (followUp != null)
         {
@@ -169,16 +217,24 @@ public class WorkSyncService(ApplicationDbContext db)
     // =========================
 
     // Retrieve all work members
-    public Task<List<Member>> GetMembersAsync() =>
-        db.Members.ToListAsync();
+    public async Task<List<Member>> GetMembersAsync()
+    {
+        var tenantId = await GetTenantIdAsync();
+        return await db.Members.Where(item => item.TenantId == tenantId).ToListAsync();
+    }
 
     // Retrieve a single work member by ID
-    public Task<Member?> GetMemberByIdAsync(int id) =>
-        db.Members.FindAsync(id).AsTask();
+    public async Task<Member?> GetMemberByIdAsync(int id)
+    {
+        var tenantId = await GetTenantIdAsync();
+        return await db.Members
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
+    }
 
     // Add a new work member
     public async Task AddMemberAsync(Member member)
     {
+        member.TenantId = await GetTenantIdAsync();
         db.Members.Add(member);
         await db.SaveChangesAsync();
     }
@@ -186,7 +242,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Update an existing work member
     public async Task UpdateMemberAsync(Member member)
     {
-        var existingMember = await db.Members.FindAsync(member.Id);
+        var tenantId = await GetTenantIdAsync();
+        var existingMember = await db.Members
+            .SingleOrDefaultAsync(item => item.Id == member.Id && item.TenantId == tenantId);
 
         if (existingMember != null)
         {
@@ -206,7 +264,9 @@ public class WorkSyncService(ApplicationDbContext db)
     // Delete a work member by ID
     public async Task DeleteMemberAsync(int id)
     {
-        var member = await db.Members.FindAsync(id);
+        var tenantId = await GetTenantIdAsync();
+        var member = await db.Members
+            .SingleOrDefaultAsync(item => item.Id == id && item.TenantId == tenantId);
 
         if (member != null)
         {

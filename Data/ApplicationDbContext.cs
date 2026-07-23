@@ -9,6 +9,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
 {
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<TenantRequest> TenantRequests => Set<TenantRequest>();
     public DbSet<Workorder> Workorders => Set<Workorder>();
     public DbSet<AssignmentItem> Assignments => Set<AssignmentItem>();
     public DbSet<FollowUpItem> FollowUpItems => Set<FollowUpItem>();
@@ -18,10 +20,50 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<ApplicationUser>()
+            .HasOne(user => user.Tenant)
+            .WithMany(tenant => tenant.Users)
+            .HasForeignKey(user => user.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Workorder>()
+            .HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AssignmentItem>()
+            .HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<FollowUpItem>()
+            .HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<Member>()
+            .HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(item => item.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Tenant>().HasData(
+            new Tenant
+            {
+                Id = 3735930,
+                Name = "Brainstormers",
+                AdminEmail = "admin@worksync.com",
+                IsApproved = true,
+                IsActive = true,
+                CreatedAtUtc = new DateTime(2026, 7, 23, 0, 0, 0, DateTimeKind.Utc),
+                ApprovedAtUtc = new DateTime(2026, 7, 23, 0, 0, 0, DateTimeKind.Utc)
+            });
+
         builder.Entity<Workorder>().HasData(
             new Workorder
             {
                 Id = 1,
+                TenantId = 3735930,
                 Title = "Equipment safety inspection",
                 Department = "Facilities",
                 AssignedEmployee = "Sarah Johnson",
@@ -34,6 +76,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new Workorder
             {
                 Id = 2,
+                TenantId = 3735930,
                 Title = "Quarterly inventory review",
                 Department = "Operations",
                 AssignedEmployee = "James Carter",
@@ -46,6 +89,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new Workorder
             {
                 Id = 3,
+                TenantId = 3735930,
                 Title = "Client onboarding checklist",
                 Department = "Customer Success",
                 AssignedEmployee = "Tom Rivera",
@@ -62,6 +106,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new AssignmentItem
             {
                 Id = 1,
+                TenantId = 3735930,
                 Title = "Prepare quarterly planning meeting",
                 Description = "Compile the agenda, project updates, and department metrics.",
                 AssignedOwner = "James Carter",
@@ -74,6 +119,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new AssignmentItem
             {
                 Id = 2,
+                TenantId = 3735930,
                 Title = "Review vendor proposals",
                 Description = "Compare pricing, delivery schedules, and support terms.",
                 AssignedOwner = "Sarah Johnson",
@@ -85,6 +131,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new AssignmentItem
             {
                 Id = 3,
+                TenantId = 3735930,
                 Title = "Publish meeting action summary",
                 Description = "Send the approved decisions, owners, and due dates to the team.",
                 AssignedOwner = "Tom Rivera",
@@ -100,6 +147,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new FollowUpItem
             {
                 Id = 1,
+                TenantId = 3735930,
                 MeetingDate = new DateTime(2026, 7, 21, 0, 0, 0, DateTimeKind.Utc),
                 FollowUpItemTitle = "Quarterly planning action items",
                 AssignedOwner = "James Carter",
@@ -112,6 +160,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new FollowUpItem
             {
                 Id = 2,
+                TenantId = 3735930,
                 MeetingDate = new DateTime(2026, 7, 18, 0, 0, 0, DateTimeKind.Utc),
                 FollowUpItemTitle = "Security review follow-up",
                 AssignedOwner = "Sarah Johnson",
@@ -127,6 +176,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new Member
             {
                 Id = 1,
+                TenantId = 3735930,
                 FirstName = "Sarah",
                 LastName = "Johnson",
                 Email = "sarah@example.com",
@@ -139,6 +189,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new Member
             {
                 Id = 2,
+                TenantId = 3735930,
                 FirstName = "James",
                 LastName = "Carter",
                 Email = "james@example.com",
@@ -151,6 +202,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new Member
             {
                 Id = 3,
+                TenantId = 3735930,
                 FirstName = "Tom",
                 LastName = "Rivera",
                 Email = "tom@example.com",

@@ -102,6 +102,9 @@
 @code {
     private List<ApplicationUser>? pendingUsers;
 
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
     [SupplyParameterFromQuery(Name = "approvalMessage")]
     private string? ApprovalMessage { get; set; }
 
@@ -115,8 +118,15 @@
 
     private async Task LoadPendingUsers()
     {
+        var currentUser = await UserManager.GetUserAsync(HttpContext.User);
+        if (currentUser?.TenantId is not int tenantId)
+        {
+            pendingUsers = [];
+            return;
+        }
+
         pendingUsers = await UserManager.Users
-            .Where(u => !u.IsApproved)
+            .Where(u => !u.IsApproved && u.TenantId == tenantId)
             .OrderBy(u => u.LastName)
             .ToListAsync();
     }

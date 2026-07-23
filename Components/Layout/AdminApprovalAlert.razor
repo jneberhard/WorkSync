@@ -83,10 +83,17 @@
                 try
                 {
                     using var context = await DbFactory.CreateDbContextAsync();
+                    var currentUserId = userPrincipal.FindFirst(
+                        System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                    var tenantId = await context.Users
+                        .Where(user => user.Id == currentUserId)
+                        .Select(user => user.TenantId)
+                        .SingleOrDefaultAsync();
 
-                    pendingUsersCount = await context.Set<ApplicationUser>()
-                        .Where(u => !u.IsApproved)
-                        .CountAsync();
+                    pendingUsersCount = tenantId is int currentTenantId
+                        ? await context.Set<ApplicationUser>()
+                            .CountAsync(u => !u.IsApproved && u.TenantId == currentTenantId)
+                        : 0;
                 }
                 catch (Exception)
                 {

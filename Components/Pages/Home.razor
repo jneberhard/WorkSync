@@ -202,9 +202,12 @@
         isLeader = user.IsInRole("Leader");
         isViewer = user.IsInRole("Viewer");
 
-        // Load assignments and workorders from the service.
-        assignments = await Service.GetAssignmentsAsync();
-        workorders = await Service.GetWorkordersAsync();
+        // Tenant data is only available to signed-in tenant users.
+        if (isSignedIn && !user.IsInRole("SuperUser"))
+        {
+            assignments = await Service.GetAssignmentsAsync();
+            workorders = await Service.GetWorkordersAsync();
+        }
 
         // Calculate assignment statistics.
         openAssignments = assignments.Count(a => a.Status == "Open");

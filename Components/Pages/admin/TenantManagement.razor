@@ -1,0 +1,107 @@
+@page "/SuperAdmin/Tenants"
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using WorkSync.Data
+
+@attribute [Authorize(Roles = "SuperUser")]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<PageTitle>Tenant Management | WorkSync</PageTitle>
+
+<div class="container mt-4">
+    <h1>Tenant Management</h1>
+    <p class="text-secondary">Approve company requests and activate each tenant's first administrator.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="alert @(Succeeded ? "alert-success" : "alert-danger")" role="status">@Message</div>
+    }
+
+    <h2 class="h4 mt-4">Pending tenant requests</h2>
+    @if (requests.Count == 0)
+    {
+        <p>No tenant requests are waiting.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead><tr><th>Company</th><th>Administrator</th><th>Requested</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var request in requests)
+                {
+                    <tr>
+                        <td>@request.CompanyName</td>
+                        <td>@request.AdminEmail</td>
+                        <td>@request.RequestedAtUtc.ToString("yyyy-MM-dd")</td>
+                        <td class="text-end">
+                            <form action="/SuperAdmin/ApproveTenant" method="post">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="requestId" value="@request.Id" />
+                                <button class="btn btn-primary btn-sm" type="submit">Approve and assign ID</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <h2 class="h4 mt-5">Companies</h2>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Company</th><th>Tenant ID</th><th>Administrator</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var tenant in tenants)
+            {
+                var pendingAdmin = pendingAdmins.FirstOrDefault(user =>
+                    user.TenantId == tenant.Id &&
+                    string.Equals(user.Email, tenant.AdminEmail, StringComparison.OrdinalIgnoreCase));
+                <tr>
+                    <td>@tenant.Name</td>
+                    <td><strong>@tenant.Id</strong></td>
+                    <td>@tenant.AdminEmail</td>
+                    <td>@(tenant.IsActive ? "Active" : "Waiting for admin registration/approval")</td>
+                    <td class="text-end">
+                        @if (!tenant.IsActive && pendingAdmin is not null)
+                        {
+                            <form action="/SuperAdmin/ApproveTenantAdmin" method="post">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="userId" value="@pendingAdmin.Id" />
+                                <button class="btn btn-success btn-sm" type="submit">Approve tenant admin</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<TenantRequest> requests = [];
+    private List<Tenant> tenants = [];
+    private List<ApplicationUser> pendingAdmins = [];
+
+    [SupplyParameterFromQuery(Name = "message")]
+    private string? Message { get; set; }
+
+    [SupplyParameterFromQuery(Name = "succeeded")]
+    private bool Succeeded { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        requests = await db.TenantRequests.AsNoTracking()
+            .Where(request => !request.IsApproved)
+            .OrderBy(request => request.RequestedAtUtc)
+            .ToListAsync();
+        tenants = await db.Tenants.AsNoTracking().OrderBy(tenant => tenant.Name).ToListAsync();
+        pendingAdmins = await db.Users.AsNoTracking()
+            .Where(user => !user.IsApproved && user.TenantId != null)
+            .ToListAsync();
+    }
+}

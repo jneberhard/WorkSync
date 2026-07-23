@@ -6,6 +6,7 @@ public class AssignmentItem
 {
     // Primary key for the assignment record
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     // Title of the assignment or task
     [Required(ErrorMessage = "Assignment title is required.")]

@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -21,6 +23,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
@@ -62,6 +65,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
+    .AddClaimsPrincipalFactory<TenantClaimsPrincipalFactory>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
@@ -98,11 +102,122 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
+app.MapPost("/Account/RequestTenant", async (
+    [FromForm] string companyName,
+    [FromForm] string adminEmail,
+    ApplicationDbContext db) =>
+{
+    companyName = companyName.Trim();
+    adminEmail = adminEmail.Trim().ToLowerInvariant();
+
+    if (string.IsNullOrWhiteSpace(companyName) ||
+        !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(adminEmail))
+    {
+        return Results.LocalRedirect(
+            "/Account/RequestTenant?message=Enter+a+valid+company+name+and+administrator+email.");
+    }
+
+    var alreadyExists =
+        await db.TenantRequests.AnyAsync(request =>
+            !request.IsApproved && request.AdminEmail == adminEmail) ||
+        await db.Tenants.AnyAsync(tenant => tenant.AdminEmail == adminEmail);
+
+    if (!alreadyExists)
+    {
+        db.TenantRequests.Add(new TenantRequest
+        {
+            CompanyName = companyName,
+            AdminEmail = adminEmail
+        });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.LocalRedirect(
+        "/Account/RequestTenant?message=Your+request+was+submitted.+The+super+user+will+provide+the+tenant+ID+after+approval.");
+});
+
+app.MapPost("/SuperAdmin/ApproveTenant", async (
+    [FromForm] int requestId,
+    ApplicationDbContext db) =>
+{
+    var request = await db.TenantRequests.SingleOrDefaultAsync(item => item.Id == requestId);
+    if (request is null || request.IsApproved)
+    {
+        return TenantManagementRedirect("The tenant request was not found.", false);
+    }
+
+    int tenantId;
+    do
+    {
+        tenantId = RandomNumberGenerator.GetInt32(100000, 1000000);
+    }
+    while (await db.Tenants.AnyAsync(tenant => tenant.Id == tenantId));
+
+    db.Tenants.Add(new Tenant
+    {
+        Id = tenantId,
+        Name = request.CompanyName,
+        AdminEmail = request.AdminEmail,
+        IsApproved = true,
+        IsActive = false,
+        ApprovedAtUtc = DateTime.UtcNow
+    });
+    request.IsApproved = true;
+    request.ApprovedAtUtc = DateTime.UtcNow;
+    request.AssignedTenantId = tenantId;
+    await db.SaveChangesAsync();
+
+    return TenantManagementRedirect(
+        $"Approved {request.CompanyName}. Tenant ID: {tenantId}. Give this ID to {request.AdminEmail}.",
+        true);
+}).RequireAuthorization(policy => policy.RequireRole("SuperUser"));
+
+app.MapPost("/SuperAdmin/ApproveTenantAdmin", async (
+    [FromForm] string userId,
+    UserManager<ApplicationUser> userManager,
+    ApplicationDbContext db) =>
+{
+    var user = await userManager.FindByIdAsync(userId);
+    var tenant = user?.TenantId is int tenantId
+        ? await db.Tenants.SingleOrDefaultAsync(item => item.Id == tenantId)
+        : null;
+
+    if (user is null || tenant is null ||
+        !string.Equals(user.Email, tenant.AdminEmail, StringComparison.OrdinalIgnoreCase))
+    {
+        return TenantManagementRedirect("The tenant administrator registration was not found.", false);
+    }
+
+    if (!await userManager.IsInRoleAsync(user, "Admin"))
+    {
+        var roleResult = await userManager.AddToRoleAsync(user, "Admin");
+        if (!roleResult.Succeeded)
+        {
+            return TenantManagementRedirect(
+                string.Join(" ", roleResult.Errors.Select(error => error.Description)), false);
+        }
+    }
+
+    user.IsApproved = true;
+    tenant.IsActive = true;
+    var updateResult = await userManager.UpdateAsync(user);
+    if (!updateResult.Succeeded)
+    {
+        return TenantManagementRedirect(
+            string.Join(" ", updateResult.Errors.Select(error => error.Description)), false);
+    }
+
+    await db.SaveChangesAsync();
+    return TenantManagementRedirect($"Activated {tenant.Name} and approved {user.Email} as its administrator.", true);
+}).RequireAuthorization(policy => policy.RequireRole("SuperUser"));
+
 app.MapPost("/Admin/ApproveUser", async (
     [FromForm] string userId,
     [FromForm] string role,
+    ClaimsPrincipal currentPrincipal,
     UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole> roleManager) =>
+    RoleManager<IdentityRole> roleManager,
+    ApplicationDbContext db) =>
 {
     static IResult RedirectWithMessage(string message, bool succeeded)
     {
@@ -121,10 +236,20 @@ app.MapPost("/Admin/ApproveUser", async (
     }
 
     var user = await userManager.FindByIdAsync(userId);
+    var currentUser = await userManager.GetUserAsync(currentPrincipal);
 
-    if (user is null)
+    if (user is null ||
+        currentUser?.TenantId is not int currentTenantId ||
+        user.TenantId != currentTenantId)
     {
-        return RedirectWithMessage("The account could not be found.", false);
+        return RedirectWithMessage("The account could not be found in your tenant.", false);
+    }
+
+    var tenantIsActive = await db.Tenants
+        .AnyAsync(tenant => tenant.Id == currentTenantId && tenant.IsActive);
+    if (!tenantIsActive)
+    {
+        return RedirectWithMessage("Your tenant is not active.", false);
     }
 
     if (!await roleManager.RoleExistsAsync(role))
@@ -158,6 +283,16 @@ app.MapPost("/Admin/ApproveUser", async (
         $"Successfully approved account access for {user.Email} as '{role}'.",
         true);
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+static IResult TenantManagementRedirect(string message, bool succeeded)
+{
+    var query = QueryString.Create(
+    [
+        new KeyValuePair<string, string?>("message", message),
+        new KeyValuePair<string, string?>("succeeded", succeeded.ToString())
+    ]);
+    return Results.LocalRedirect($"/SuperAdmin/Tenants{query}");
+}
 
 using (var scope = app.Services.CreateScope())
 {

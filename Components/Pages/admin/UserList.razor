@@ -8,6 +8,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole> RoleManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>User Directory | WorkSync</PageTitle>
 
@@ -158,16 +159,20 @@
 
     private string? userIdToEdit;
     private UserDisplayModel? editingUser;
+    private int? currentTenantId;
 
     protected override async Task OnInitializedAsync()
     {
+        var principal =
+            (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        currentTenantId = (await UserManager.GetUserAsync(principal))?.TenantId;
         await LoadUserRoster();
     }
 
     private async Task LoadUserRoster()
     {
         var approvedUsers = await UserManager.Users
-            .Where(u => u.IsApproved)
+            .Where(u => u.IsApproved && u.TenantId == currentTenantId)
             .OrderBy(u => u.LastName)
             .ToListAsync();
 
@@ -223,13 +228,14 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(editingUser.SelectedRole))
+        if (editingUser.SelectedRole is not ("Admin" or "Leader" or "Viewer"))
         {
-            editingUser.SelectedRole = "Viewer";
+            errorMessage = "Validation Error: The selected tenant role is invalid.";
+            return;
         }
 
         var targetUser = await UserManager.FindByIdAsync(editingUser.Id);
-        if (targetUser == null)
+        if (targetUser == null || targetUser.TenantId != currentTenantId)
         {
             errorMessage = "Error: Target user account was not located inside the infrastructure database registries.";
             CancelEdit();
@@ -282,7 +288,7 @@
     {
         userIdToConfirmDelete = null;
         var targetUser = await UserManager.FindByIdAsync(userId);
-        if (targetUser == null)
+        if (targetUser == null || targetUser.TenantId != currentTenantId)
         {
             errorMessage = "Error: Could not locate the selected user record in the database.";
             return;

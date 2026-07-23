@@ -1,8 +1,10 @@
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using WorkSync.Data
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -22,6 +24,16 @@
 <div class="nav-scrollable">
     <nav class="nav flex-column">
         <p class="nav-section-label">Workspace</p>
+
+        <AuthorizeView Roles="SuperUser">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SuperAdmin/Tenants">
+                        <span class="bi bi-buildings" aria-hidden="true"></span> Manage Tenants
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -170,19 +182,25 @@
 
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
 
-        UpdatePendingCount();
+        await UpdatePendingCount();
     }
 
-    private void UpdatePendingCount()
+    private async Task UpdatePendingCount()
     {
         try
         {
-            pendingCount = UserManager.Users.Count(u => !u.IsApproved);
+            var principal =
+                (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            var user = await UserManager.GetUserAsync(principal);
+            pendingCount = user?.TenantId is int tenantId
+                ? await UserManager.Users.CountAsync(
+                    candidate => !candidate.IsApproved && candidate.TenantId == tenantId)
+                : 0;
         }
         catch
         {
@@ -190,12 +208,12 @@
         }
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
 
-        UpdatePendingCount();
-        StateHasChanged();
+        await UpdatePendingCount();
+        await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

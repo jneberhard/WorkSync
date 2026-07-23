@@ -16,11 +16,12 @@ Section 8 - CSE 325
 
 These accounts are for demonstration and testing only.
 
-| Role   | Username                                          | Password   |
-| ------ | ------------------------------------------------- | ---------- |
-| Admin  | [admin@worksync.com](mailto:admin@worksync.com)   | Admin123!  |
-| Leader | [leader@worksync.com](mailto:leader@worksync.com) | Leader123! |
-| Viewer | [viewer@worksync.com](mailto:viewer@worksync.com) | Viewer123! |
+| Role       | Username                                                | Password      | Tenant |
+| ---------- | ------------------------------------------------------- | ------------- | ------ |
+| Super User | [superuser@worksync.com](mailto:superuser@worksync.com) | SuperUser123! | System |
+| Admin      | [admin@worksync.com](mailto:admin@worksync.com)         | Admin123!     | Brainstormers (`3735930`) |
+| Leader     | [leader@worksync.com](mailto:leader@worksync.com)       | Leader123!    | Brainstormers (`3735930`) |
+| Viewer     | [viewer@worksync.com](mailto:viewer@worksync.com)       | Viewer123!    | Brainstormers (`3735930`) |
 
 ## Overview
 
@@ -37,6 +38,8 @@ It is easy for something important to get missed if it only lives in a text thre
 ## Main Features
 
 * Role-based login and navigation
+* Tenant-isolated company workspaces and tenant-aware registration
+* Super-user tenant request and administrator approval workflow
 * Dashboard overview
 * Workorders tracking
 * Assignments tracking

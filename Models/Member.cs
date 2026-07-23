@@ -3,6 +3,7 @@ namespace WorkSync.Models;
 public class Member
 {
     public int Id { get; set; }
+    public int TenantId { get; set; }
 
     public string FirstName { get; set; } = "";
 

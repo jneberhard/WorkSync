@@ -1,0 +1,36 @@
+@page "/Account/RequestTenant"
+
+@using Microsoft.AspNetCore.WebUtilities
+
+<PageTitle>Request a company tenant</PageTitle>
+
+<h1>Request a company tenant</h1>
+<p class="text-secondary">
+    Submit your company and intended administrator email. A WorkSync super user
+    will approve the company and assign its six-digit tenant ID.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert alert-info" role="status">@Message</div>
+}
+
+<form action="/Account/RequestTenant" method="post" class="col-lg-6">
+    <AntiforgeryToken />
+    <div class="form-floating mb-3">
+        <input class="form-control" id="companyName" name="companyName"
+               maxlength="120" required placeholder="Company name" />
+        <label for="companyName">Company name</label>
+    </div>
+    <div class="form-floating mb-3">
+        <input class="form-control" id="adminEmail" name="adminEmail"
+               type="email" maxlength="256" required placeholder="admin@example.com" />
+        <label for="adminEmail">Administrator email</label>
+    </div>
+    <button class="btn btn-primary" type="submit">Submit tenant request</button>
+</form>
+
+@code {
+    [SupplyParameterFromQuery(Name = "message")]
+    private string? Message { get; set; }
+}

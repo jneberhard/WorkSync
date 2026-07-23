@@ -1,0 +1,58 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using WorkSync.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+@if (isAuthenticated)
+{
+    <span class="text-secondary small ms-2">
+        @if (tenant is not null)
+        {
+            <span>@tenant.Name · Tenant @tenant.Id · @roleName</span>
+        }
+        else
+        {
+            <span>WorkSync System · @roleName</span>
+        }
+    </span>
+}
+
+@code {
+    private bool isAuthenticated;
+    private Tenant? tenant;
+    private string roleName = "User";
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthStateTask is null)
+        {
+            return;
+        }
+
+        var principal = (await AuthStateTask).User;
+        isAuthenticated = principal.Identity?.IsAuthenticated == true;
+        if (!isAuthenticated)
+        {
+            return;
+        }
+
+        roleName = principal.IsInRole("SuperUser") ? "Super User" :
+            principal.IsInRole("Admin") ? "Admin" :
+            principal.IsInRole("Leader") ? "Leader" :
+            principal.IsInRole("Viewer") ? "Viewer" : "User";
+
+        var user = await UserManager.GetUserAsync(principal);
+        if (user?.TenantId is int tenantId)
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            tenant = await db.Tenants.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == tenantId);
+        }
+    }
+}

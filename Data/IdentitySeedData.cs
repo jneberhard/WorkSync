@@ -14,7 +14,7 @@ public static class IdentitySeedData
         var userManager =
             scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        string[] roles = ["Admin", "Leader", "Viewer"];
+        string[] roles = ["SuperUser", "Admin", "Leader", "Viewer"];
 
         foreach (var role in roles)
         {
@@ -31,19 +31,30 @@ public static class IdentitySeedData
             "admin@worksync.com",
             "Admin123!",
             "Admin",
+            tenantId: 3735930,
             enforcePassword: true);
 
         await CreateUserIfMissing(
             userManager,
             "leader@worksync.com",
             "Leader123!",
-            "Leader");
+            "Leader",
+            tenantId: 3735930);
 
         await CreateUserIfMissing(
             userManager,
             "viewer@worksync.com",
             "Viewer123!",
-            "Viewer");
+            "Viewer",
+            tenantId: 3735930);
+
+        await CreateUserIfMissing(
+            userManager,
+            "superuser@worksync.com",
+            "SuperUser123!",
+            "SuperUser",
+            tenantId: null,
+            enforcePassword: true);
     }
 
     private static async Task CreateUserIfMissing(
@@ -51,6 +62,7 @@ public static class IdentitySeedData
         string email,
         string password,
         string role,
+        int? tenantId,
         bool enforcePassword = false)
     {
         var user = await userManager.FindByEmailAsync(email);
@@ -62,7 +74,8 @@ public static class IdentitySeedData
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
-                IsApproved = true
+                IsApproved = true,
+                TenantId = tenantId
             };
 
             var result = await userManager.CreateAsync(user, password);
@@ -78,6 +91,12 @@ public static class IdentitySeedData
         else
         {
             var userNeedsUpdate = false;
+
+            if (user.TenantId != tenantId)
+            {
+                user.TenantId = tenantId;
+                userNeedsUpdate = true;
+            }
 
             if (!user.EmailConfirmed)
             {

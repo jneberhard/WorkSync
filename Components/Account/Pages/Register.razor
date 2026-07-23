@@ -5,6 +5,7 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
 @using WorkSync.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -14,6 +15,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <PageTitle>Register</PageTitle>
 
@@ -29,6 +31,20 @@
             <h2>Create a new account.</h2>
             <hr />
             <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="form-floating mb-3">
+                <InputNumber @bind-Value="Input.TenantId"
+                             id="Input.TenantId"
+                             class="form-control"
+                             aria-required="true"
+                             placeholder="Tenant ID" />
+                <label for="Input.TenantId">Tenant ID</label>
+                <ValidationMessage For="() => Input.TenantId" class="text-danger" />
+                <div class="form-text">
+                    Get this number from your company administrator.
+                    <a href="/Account/RequestTenant">Request a new company tenant</a>.
+                </div>
+            </div>
 
             @* First Name Input Field *@
             <div class="form-floating mb-3">
@@ -111,7 +127,9 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private string? registrationError;
+    private string? Message => registrationError ??
+        (identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}");
 
     protected override void OnInitialized()
     {
@@ -120,12 +138,33 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tenant = await db.Tenants
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == Input.TenantId && item.IsApproved);
+
+        if (tenant is null)
+        {
+            registrationError = "Error: The tenant ID is not valid or has not been approved.";
+            return;
+        }
+
+        var isTenantAdmin =
+            string.Equals(tenant.AdminEmail, Input.Email, StringComparison.OrdinalIgnoreCase);
+
+        if (!tenant.IsActive && !isTenantAdmin)
+        {
+            registrationError = "Error: This tenant is waiting for its administrator to be approved.";
+            return;
+        }
+
         var user = CreateUser();
 
         // Map properties out of user interface data models and onto custom tracking entity
         user.FirstName = Input.FirstName;
         user.LastName = Input.LastName;
         user.IsApproved = false; // new users will have to be approved by an admin before they can sign in
+        user.TenantId = tenant.Id;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -186,6 +225,11 @@
 
     private sealed class InputModel
     {
+        [Required(ErrorMessage = "Tenant ID is required.")]
+        [Range(100000, 9999999, ErrorMessage = "Enter the tenant ID supplied by your administrator.")]
+        [Display(Name = "Tenant ID")]
+        public int TenantId { get; set; }
+
         [Required(ErrorMessage = "First name is required.")]
         [StringLength(50, ErrorMessage = "First name cannot exceed 50 characters.")]
         [Display(Name = "First Name")]
