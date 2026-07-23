@@ -1,9 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using WorkSync.Data
 
-@inject UserManager<ApplicationUser> UserManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 @if (isAuthenticated)
@@ -47,8 +45,7 @@
             principal.IsInRole("Leader") ? "Leader" :
             principal.IsInRole("Viewer") ? "Viewer" : "User";
 
-        var user = await UserManager.GetUserAsync(principal);
-        if (user?.TenantId is int tenantId)
+        if (int.TryParse(principal.FindFirst("tenant_id")?.Value, out var tenantId))
         {
             await using var db = await DbFactory.CreateDbContextAsync();
             tenant = await db.Tenants.AsNoTracking()

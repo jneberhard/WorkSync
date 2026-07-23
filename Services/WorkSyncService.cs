@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WorkSync.Data;
 using WorkSync.Models;
@@ -9,24 +8,27 @@ namespace WorkSync.Services;
 // Service class responsible for handling all database operations
 // related to Workorders, Assignments, Follow-Ups, and Members.
 public class WorkSyncService(
-    ApplicationDbContext db,
+    IDbContextFactory<ApplicationDbContext> dbFactory,
     AuthenticationStateProvider authenticationStateProvider,
-    UserManager<ApplicationUser> userManager,
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor) : IDisposable
 {
+    private readonly ApplicationDbContext db = dbFactory.CreateDbContext();
+
     private async Task<int> GetTenantIdAsync()
     {
         var user = httpContextAccessor.HttpContext?.User ??
             (await authenticationStateProvider.GetAuthenticationStateAsync()).User;
-        var applicationUser = await userManager.GetUserAsync(user);
+        var tenantClaim = user.FindFirst("tenant_id")?.Value;
 
-        if (applicationUser?.TenantId is not int tenantId)
+        if (!int.TryParse(tenantClaim, out var tenantId))
         {
             throw new UnauthorizedAccessException("A tenant is required for this operation.");
         }
 
         return tenantId;
     }
+
+    public void Dispose() => db.Dispose();
 
     // =========================
     // WORKORDERS CRUD

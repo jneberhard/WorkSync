@@ -3,7 +3,6 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using WorkSync.Data
 
@@ -180,7 +179,7 @@
     private string? currentUrl;
     private int pendingCount = 0;
 
-    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+    [Inject] private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -196,11 +195,16 @@
         {
             var principal =
                 (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
-            var user = await UserManager.GetUserAsync(principal);
-            pendingCount = user?.TenantId is int tenantId
-                ? await UserManager.Users.CountAsync(
-                    candidate => !candidate.IsApproved && candidate.TenantId == tenantId)
-                : 0;
+            if (int.TryParse(principal.FindFirst("tenant_id")?.Value, out var tenantId))
+            {
+                await using var db = await DbFactory.CreateDbContextAsync();
+                pendingCount = await db.Users.CountAsync(
+                    candidate => !candidate.IsApproved && candidate.TenantId == tenantId);
+            }
+            else
+            {
+                pendingCount = 0;
+            }
         }
         catch
         {

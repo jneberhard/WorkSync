@@ -99,6 +99,13 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// Vercel's static asset layer does not expose the underscore-prefixed
+// /_framework path, so serve the Blazor runtime through an application route.
+app.MapGet("/blazor.web.js", (IWebHostEnvironment environment) =>
+    Results.File(
+        Path.Combine(environment.WebRootPath, "_framework", "blazor.web.js"),
+        "text/javascript; charset=utf-8"));
+
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
