@@ -1,12 +1,13 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.WebUtilities
 @using WorkSync.Data
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 
-@if (pendingUsersCount > 0 && showAlertModal)
+@if (pendingUsersCount > 0 && showAlertModal && !IsApprovalPage && !IsDismissedByQuery)
 {
     @* Pending Account Approvals Modal *@
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050;" role="dialog">
@@ -16,7 +17,12 @@
                     <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
                         <i class="bi bi-exclamation-triangle-fill text-warning"></i> Pending Account Approvals
                     </h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                    <a class="btn-close"
+                       href="@DismissUrl"
+                       role="button"
+                       aria-label="Close"
+                       @onclick="CloseModal"
+                       @onclick:preventDefault="true"></a>
                 </div>
                 <div class="modal-body p-4">
                     <p class="text-secondary fs-5 mb-0">
@@ -24,9 +30,10 @@
                     </p>
                 </div>
                 <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-warning rounded-3 px-4 fw-semibold" @onclick="NavigateToApprovals">
+                    <a class="btn btn-warning rounded-3 px-4 fw-semibold"
+                       href="/Admin/ManageUsers">
                         Review Requests Now
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -40,11 +47,29 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthStateTask { get; set; }
 
-    private void NavigateToApprovals()
+    private string CurrentPath =>
+        NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
+            .Split('?', '#')[0]
+            .TrimEnd('/');
+
+    private bool IsApprovalPage =>
+        CurrentPath.Equals("Admin/ManageUsers", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsDismissedByQuery
     {
-        showAlertModal = false;
-        NavigationManager.NavigateTo("/Admin/ManageUsers");
+        get
+        {
+            var query = QueryHelpers.ParseQuery(
+                NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query);
+
+            return query.TryGetValue("dismissApprovals", out var value) &&
+                   bool.TryParse(value.ToString(), out var dismissed) &&
+                   dismissed;
+        }
     }
+
+    private string DismissUrl =>
+        NavigationManager.GetUriWithQueryParameter("dismissApprovals", true);
 
     protected override async Task OnParametersSetAsync()
     {
