@@ -26,7 +26,9 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
             uri = navigationManager.ToBaseRelativePath(uri);
         }
 
-        navigationManager.NavigateTo(uri);
+        // Identity changes the authentication cookie in the HTTP response.
+        // A full reload ensures the next request and Blazor circuit read that cookie.
+        navigationManager.NavigateTo(uri, forceLoad: true);
     }
 
     public void RedirectTo(string uri, Dictionary<string, object?> queryParameters)

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
+
+// Persist cookie-encryption keys in PostgreSQL so every stateless production
+// instance can read authentication cookies issued by another instance.
+builder.Services.AddDataProtection()
+    .SetApplicationName("WorkSync")
+    .PersistKeysToDbContext<ApplicationDbContext>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

@@ -20,7 +20,9 @@ public static class IdentitySeedData
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                EnsureSucceeded(
+                    await roleManager.CreateAsync(new IdentityRole(role)),
+                    $"create role {role}");
             }
         }
 
@@ -28,7 +30,8 @@ public static class IdentitySeedData
             userManager,
             "admin@worksync.com",
             "Admin123!",
-            "Admin");
+            "Admin",
+            enforcePassword: true);
 
         await CreateUserIfMissing(
             userManager,
@@ -47,7 +50,8 @@ public static class IdentitySeedData
         UserManager<ApplicationUser> userManager,
         string email,
         string password,
-        string role)
+        string role,
+        bool enforcePassword = false)
     {
         var user = await userManager.FindByEmailAsync(email);
 
@@ -71,15 +75,78 @@ public static class IdentitySeedData
                         result.Errors.Select(e => e.Description)));
             }
         }
-        else if (!user.IsApproved)
+        else
         {
-            user.IsApproved = true;
-            await userManager.UpdateAsync(user);
+            var userNeedsUpdate = false;
+
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                userNeedsUpdate = true;
+            }
+
+            if (!user.IsApproved)
+            {
+                user.IsApproved = true;
+                userNeedsUpdate = true;
+            }
+
+            // Keep the requested production admin account usable with its
+            // documented password-only credentials.
+            if (enforcePassword &&
+                !string.Equals(user.UserName, email, StringComparison.OrdinalIgnoreCase))
+            {
+                user.UserName = email;
+                userNeedsUpdate = true;
+            }
+
+            if (enforcePassword && user.TwoFactorEnabled)
+            {
+                user.TwoFactorEnabled = false;
+                userNeedsUpdate = true;
+            }
+
+            if (enforcePassword &&
+                (user.LockoutEnd is not null || user.AccessFailedCount != 0))
+            {
+                user.LockoutEnd = null;
+                user.AccessFailedCount = 0;
+                userNeedsUpdate = true;
+            }
+
+            if (userNeedsUpdate)
+            {
+                EnsureSucceeded(
+                    await userManager.UpdateAsync(user),
+                    $"update user {email}");
+            }
+
+            if (enforcePassword && !await userManager.CheckPasswordAsync(user, password))
+            {
+                var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+                EnsureSucceeded(
+                    await userManager.ResetPasswordAsync(user, resetToken, password),
+                    $"reset password for {email}");
+            }
         }
 
         if (!await userManager.IsInRoleAsync(user, role))
         {
-            await userManager.AddToRoleAsync(user, role);
+            EnsureSucceeded(
+                await userManager.AddToRoleAsync(user, role),
+                $"add {email} to role {role}");
         }
+    }
+
+    private static void EnsureSucceeded(IdentityResult result, string operation)
+    {
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to {operation}: " +
+            string.Join(", ", result.Errors.Select(error => error.Description)));
     }
 }

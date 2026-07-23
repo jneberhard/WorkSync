@@ -166,6 +166,9 @@
 
     private bool ShowNotification { get; set; } // Controls whether the reminder popup is displayed
 
+    [SupplyParameterFromQuery(Name = "dismissReminder")]
+    private bool DismissReminder { get; set; }
+
     // Values displayed inside the reminder popup
     private int PendingAssignments { get; set; }
     private int OverdueAssignments { get; set; }
@@ -225,10 +228,11 @@
 
         // Show popup if there is anything requiring attention.
         ShowNotification =
-            PendingAssignments > 0 ||
-            OverdueAssignments > 0 ||
-            OpenWorkorders > 0 ||
-            FollowUpsNeeded > 0;
+            !DismissReminder &&
+            (PendingAssignments > 0 ||
+             OverdueAssignments > 0 ||
+             OpenWorkorders > 0 ||
+             FollowUpsNeeded > 0);
     }
 
     // Hides the notification popup. Blazor re-renders after the click event completes.
@@ -303,11 +307,13 @@
                     </ul>
 
                     <!-- Closes the popup when clicked -->
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="CloseNotification">
+                    <a class="btn btn-primary"
+                       href="/?dismissReminder=true"
+                       role="button"
+                       @onclick="CloseNotification"
+                       @onclick:preventDefault="true">
                         OK
-                    </button>
+                    </a>
                 </div>
             </div>
         }
