@@ -141,20 +141,14 @@
         await using var db = await DbFactory.CreateDbContextAsync();
         var tenant = await db.Tenants
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == Input.TenantId && item.IsApproved);
+            .SingleOrDefaultAsync(item =>
+                item.Id == Input.TenantId &&
+                item.IsApproved &&
+                item.IsActive);
 
         if (tenant is null)
         {
-            registrationError = "Error: The tenant ID is not valid or has not been approved.";
-            return;
-        }
-
-        var isTenantAdmin =
-            string.Equals(tenant.AdminEmail, Input.Email, StringComparison.OrdinalIgnoreCase);
-
-        if (!tenant.IsActive && !isTenantAdmin)
-        {
-            registrationError = "Error: This tenant is waiting for its administrator to be approved.";
+            registrationError = "Error: The tenant ID is not valid, active, or approved.";
             return;
         }
 

@@ -11,7 +11,9 @@
 
 <div class="container mt-4">
     <h1>Tenant Management</h1>
-    <p class="text-secondary">Approve company requests and activate each tenant's first administrator.</p>
+    <p class="text-secondary">
+        Approve company requests, archive unpaid workspaces without losing data, and restore access when needed.
+    </p>
 
     @if (!string.IsNullOrWhiteSpace(Message))
     {
@@ -27,7 +29,7 @@
     {
         <div class="table-responsive">
             <table class="table align-middle">
-                <thead><tr><th>Company</th><th>Administrator</th><th>Requested</th><th></th></tr></thead>
+                <thead><tr><th>Company</th><th>Administrator</th><th>Requested</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                 @foreach (var request in requests)
                 {
@@ -35,11 +37,20 @@
                         <td>@request.CompanyName</td>
                         <td>@request.AdminEmail</td>
                         <td>@request.RequestedAtUtc.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            @(string.IsNullOrEmpty(request.AdminUserId)
+                                ? "Needs administrator credentials"
+                                : "Ready for approval")
+                        </td>
                         <td class="text-end">
                             <form action="/SuperAdmin/ApproveTenant" method="post">
                                 <AntiforgeryToken />
                                 <input type="hidden" name="requestId" value="@request.Id" />
-                                <button class="btn btn-primary btn-sm" type="submit">Approve and assign ID</button>
+                                <button class="btn btn-primary btn-sm"
+                                        type="submit"
+                                        disabled="@string.IsNullOrEmpty(request.AdminUserId)">
+                                    Approve tenant and admin
+                                </button>
                             </form>
                         </td>
                     </tr>
@@ -56,23 +67,60 @@
             <tbody>
             @foreach (var tenant in tenants)
             {
-                var pendingAdmin = pendingAdmins.FirstOrDefault(user =>
-                    user.TenantId == tenant.Id &&
-                    string.Equals(user.Email, tenant.AdminEmail, StringComparison.OrdinalIgnoreCase));
                 <tr>
                     <td>@tenant.Name</td>
                     <td><strong>@tenant.Id</strong></td>
                     <td>@tenant.AdminEmail</td>
-                    <td>@(tenant.IsActive ? "Active" : "Waiting for admin registration/approval")</td>
-                    <td class="text-end">
-                        @if (!tenant.IsActive && pendingAdmin is not null)
+                    <td>
+                        @if (tenant.IsActive)
                         {
-                            <form action="/SuperAdmin/ApproveTenantAdmin" method="post">
-                                <AntiforgeryToken />
-                                <input type="hidden" name="userId" value="@pendingAdmin.Id" />
-                                <button class="btn btn-success btn-sm" type="submit">Approve tenant admin</button>
-                            </form>
+                            <span class="badge text-bg-success">Active</span>
                         }
+                        else
+                        {
+                            <span class="badge text-bg-secondary">Archived</span>
+                            @if (tenant.ArchivedAtUtc is DateTime archivedAtUtc)
+                            {
+                                <div class="small text-secondary mt-1">
+                                    @archivedAtUtc.ToString("yyyy-MM-dd")
+                                </div>
+                            }
+                        }
+                    </td>
+                    <td class="text-end">
+                        <form action="/SuperAdmin/SetTenantArchived" method="post"
+                              class="d-inline-block mb-2">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="tenantId" value="@tenant.Id" />
+                            <input type="hidden" name="archive" value="@tenant.IsActive.ToString().ToLowerInvariant()" />
+                            <button class="btn @(tenant.IsActive ? "btn-outline-warning" : "btn-outline-success") btn-sm"
+                                    type="submit">
+                                @(tenant.IsActive ? "Archive workspace" : "Restore workspace")
+                            </button>
+                        </form>
+
+                        <details>
+                            <summary class="small text-danger">Permanently remove tenant</summary>
+                            <form action="/SuperAdmin/RemoveTenant" method="post"
+                                  class="d-inline-flex align-items-center gap-2 mt-2">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="tenantId" value="@tenant.Id" />
+                            <label class="visually-hidden" for="confirm-tenant-@tenant.Id">
+                                Confirm tenant ID
+                            </label>
+                            <input id="confirm-tenant-@tenant.Id"
+                                   class="form-control form-control-sm"
+                                   style="width: 8rem"
+                                   type="text"
+                                   inputmode="numeric"
+                                   name="tenantIdConfirmation"
+                                   placeholder="Type @tenant.Id"
+                                   required />
+                            <button class="btn btn-outline-danger btn-sm" type="submit">
+                                Permanently remove
+                            </button>
+                            </form>
+                        </details>
                     </td>
                 </tr>
             }
@@ -84,7 +132,6 @@
 @code {
     private List<TenantRequest> requests = [];
     private List<Tenant> tenants = [];
-    private List<ApplicationUser> pendingAdmins = [];
 
     [SupplyParameterFromQuery(Name = "message")]
     private string? Message { get; set; }
@@ -100,8 +147,5 @@
             .OrderBy(request => request.RequestedAtUtc)
             .ToListAsync();
         tenants = await db.Tenants.AsNoTracking().OrderBy(tenant => tenant.Name).ToListAsync();
-        pendingAdmins = await db.Users.AsNoTracking()
-            .Where(user => !user.IsApproved && user.TenantId != null)
-            .ToListAsync();
     }
 }

@@ -6,8 +6,9 @@
 
 <h1>Request a company tenant</h1>
 <p class="text-secondary">
-    Submit your company and intended administrator email. A WorkSync super user
-    will approve the company and assign its six-digit tenant ID.
+    Create the intended company administrator account. A WorkSync super user
+    will approve the company, assign its six-digit tenant ID, and activate this
+    account with the Admin role.
 </p>
 
 @if (!string.IsNullOrWhiteSpace(Message))
@@ -23,9 +24,31 @@
         <label for="companyName">Company name</label>
     </div>
     <div class="form-floating mb-3">
+        <input class="form-control" id="firstName" name="firstName"
+               maxlength="50" required placeholder="First name" />
+        <label for="firstName">Administrator first name</label>
+    </div>
+    <div class="form-floating mb-3">
+        <input class="form-control" id="lastName" name="lastName"
+               maxlength="50" required placeholder="Last name" />
+        <label for="lastName">Administrator last name</label>
+    </div>
+    <div class="form-floating mb-3">
         <input class="form-control" id="adminEmail" name="adminEmail"
                type="email" maxlength="256" required placeholder="admin@example.com" />
         <label for="adminEmail">Administrator email</label>
+    </div>
+    <div class="form-floating mb-3">
+        <input class="form-control" id="password" name="password"
+               type="password" minlength="6" maxlength="100" required
+               autocomplete="new-password" placeholder="Password" />
+        <label for="password">Password</label>
+    </div>
+    <div class="form-floating mb-3">
+        <input class="form-control" id="confirmPassword" name="confirmPassword"
+               type="password" minlength="6" maxlength="100" required
+               autocomplete="new-password" placeholder="Confirm password" />
+        <label for="confirmPassword">Confirm password</label>
     </div>
     <button class="btn btn-primary" type="submit">Submit tenant request</button>
 </form>

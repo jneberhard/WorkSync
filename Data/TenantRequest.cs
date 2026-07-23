@@ -12,6 +12,9 @@ public class TenantRequest
     [Required, EmailAddress, StringLength(256)]
     public string AdminEmail { get; set; } = "";
 
+    [Required]
+    public string AdminUserId { get; set; } = "";
+
     public DateTime RequestedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? ApprovedAtUtc { get; set; }
     public int? AssignedTenantId { get; set; }

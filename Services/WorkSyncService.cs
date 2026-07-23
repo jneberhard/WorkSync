@@ -25,6 +25,14 @@ public class WorkSyncService(
             throw new UnauthorizedAccessException("A tenant is required for this operation.");
         }
 
+        var tenantIsActive = await db.Tenants
+            .AnyAsync(tenant => tenant.Id == tenantId && tenant.IsActive);
+        if (!tenantIsActive)
+        {
+            throw new UnauthorizedAccessException(
+                "This company workspace is archived. Contact your company administrator for assistance.");
+        }
+
         return tenantId;
     }
 

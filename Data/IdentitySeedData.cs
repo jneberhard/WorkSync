@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace WorkSync.Data;
 
@@ -14,6 +15,9 @@ public static class IdentitySeedData
         var userManager =
             scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
+        var db =
+            scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
         string[] roles = ["SuperUser", "Admin", "Leader", "Viewer"];
 
         foreach (var role in roles)
@@ -26,27 +30,30 @@ public static class IdentitySeedData
             }
         }
 
-        await CreateUserIfMissing(
-            userManager,
-            "admin@worksync.com",
-            "Admin123!",
-            "Admin",
-            tenantId: 3735930,
-            enforcePassword: true);
+        if (await db.Tenants.AnyAsync(tenant => tenant.Id == 3735930))
+        {
+            await CreateUserIfMissing(
+                userManager,
+                "admin@worksync.com",
+                "Admin123!",
+                "Admin",
+                tenantId: 3735930,
+                enforcePassword: true);
 
-        await CreateUserIfMissing(
-            userManager,
-            "leader@worksync.com",
-            "Leader123!",
-            "Leader",
-            tenantId: 3735930);
+            await CreateUserIfMissing(
+                userManager,
+                "leader@worksync.com",
+                "Leader123!",
+                "Leader",
+                tenantId: 3735930);
 
-        await CreateUserIfMissing(
-            userManager,
-            "viewer@worksync.com",
-            "Viewer123!",
-            "Viewer",
-            tenantId: 3735930);
+            await CreateUserIfMissing(
+                userManager,
+                "viewer@worksync.com",
+                "Viewer123!",
+                "Viewer",
+                tenantId: 3735930);
+        }
 
         await CreateUserIfMissing(
             userManager,

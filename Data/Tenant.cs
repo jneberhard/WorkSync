@@ -19,6 +19,7 @@ public class Tenant
     public bool IsActive { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? ApprovedAtUtc { get; set; }
+    public DateTime? ArchivedAtUtc { get; set; }
 
     public ICollection<ApplicationUser> Users { get; set; } = [];
 }
