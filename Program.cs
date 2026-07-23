@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WorkSync.Components;
 using WorkSync.Components.Account;
@@ -86,6 +87,8 @@ else
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -94,6 +97,67 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+
+app.MapPost("/Admin/ApproveUser", async (
+    [FromForm] string userId,
+    [FromForm] string role,
+    UserManager<ApplicationUser> userManager,
+    RoleManager<IdentityRole> roleManager) =>
+{
+    static IResult RedirectWithMessage(string message, bool succeeded)
+    {
+        var query = QueryString.Create(
+        [
+            new KeyValuePair<string, string?>("approvalMessage", message),
+            new KeyValuePair<string, string?>("approvalSucceeded", succeeded.ToString())
+        ]);
+
+        return Results.LocalRedirect($"/Admin/ManageUsers{query}");
+    }
+
+    if (role is not ("Admin" or "Leader" or "Viewer"))
+    {
+        return RedirectWithMessage("The selected role is invalid.", false);
+    }
+
+    var user = await userManager.FindByIdAsync(userId);
+
+    if (user is null)
+    {
+        return RedirectWithMessage("The account could not be found.", false);
+    }
+
+    if (!await roleManager.RoleExistsAsync(role))
+    {
+        return RedirectWithMessage($"The '{role}' role is not configured.", false);
+    }
+
+    if (!await userManager.IsInRoleAsync(user, role))
+    {
+        var roleResult = await userManager.AddToRoleAsync(user, role);
+
+        if (!roleResult.Succeeded)
+        {
+            return RedirectWithMessage(
+                string.Join(" ", roleResult.Errors.Select(error => error.Description)),
+                false);
+        }
+    }
+
+    user.IsApproved = true;
+    var updateResult = await userManager.UpdateAsync(user);
+
+    if (!updateResult.Succeeded)
+    {
+        return RedirectWithMessage(
+            string.Join(" ", updateResult.Errors.Select(error => error.Description)),
+            false);
+    }
+
+    return RedirectWithMessage(
+        $"Successfully approved account access for {user.Email} as '{role}'.",
+        true);
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 using (var scope = app.Services.CreateScope())
 {

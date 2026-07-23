@@ -1,14 +1,11 @@
 @page "/Admin/ManageUsers"
-@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.Web
 @using WorkSync.Data
 
 @attribute [Authorize(Roles = "Admin")]
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
 
 <PageTitle>Manage Users - Admin Center</PageTitle>
 
@@ -24,11 +21,12 @@
 
     <div id="pending-approval-list"></div>
 
-    @if (!string.IsNullOrEmpty(successMessage))
+    @if (!string.IsNullOrEmpty(ApprovalMessage))
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> @successMessage
-            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        <div class="alert @(ApprovalSucceeded ? "alert-success" : "alert-danger")"
+             role="alert">
+            <i class="bi @(ApprovalSucceeded ? "bi-check-circle-fill" : "bi-exclamation-circle-fill") me-2"></i>
+            @ApprovalMessage
         </div>
     }
 
@@ -64,26 +62,32 @@
                     <tbody>
                         @foreach (var user in pendingUsers)
                         {
-                            if (!selectedRoles.ContainsKey(user.Id))
-                            {
-                                selectedRoles[user.Id] = "Viewer";
-                            }
+                            var approvalFormId = $"approve-user-{user.Id}";
 
                             <tr>
                                 <td class="px-4 font-weight-bold">@user.LastName, @user.FirstName</td>
                                 <td class="text-secondary">@user.Email</td>
                                 <td>
-                                    <select class="form-select form-select-sm rounded-3" @bind="selectedRoles[user.Id]">
+                                    <select class="form-select form-select-sm rounded-3"
+                                            name="role"
+                                            form="@approvalFormId"
+                                            aria-label="Role for @user.Email">
                                         <option value="Viewer">Viewer</option>
                                         <option value="Leader">Leader</option>
                                         <option value="Admin">Admin</option>
                                     </select>
                                 </td>
                                 <td class="text-end px-4">
-                                    <button class="btn btn-sm btn-success rounded-3 px-3 fw-semibold"
-                                            @onclick="() => ApproveUserWithRole(user)">
-                                        <i class="bi bi-person-check-fill me-1"></i> Approve Access
-                                    </button>
+                                    <form id="@approvalFormId"
+                                          action="/Admin/ApproveUser"
+                                          method="post">
+                                        <AntiforgeryToken />
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit"
+                                                class="btn btn-sm btn-success rounded-3 px-3 fw-semibold">
+                                            <i class="bi bi-person-check-fill me-1"></i> Approve Access
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         }
@@ -97,8 +101,12 @@
 
 @code {
     private List<ApplicationUser>? pendingUsers;
-    private Dictionary<string, string> selectedRoles = new();
-    private string? successMessage;
+
+    [SupplyParameterFromQuery(Name = "approvalMessage")]
+    private string? ApprovalMessage { get; set; }
+
+    [SupplyParameterFromQuery(Name = "approvalSucceeded")]
+    private bool ApprovalSucceeded { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -111,28 +119,5 @@
             .Where(u => !u.IsApproved)
             .OrderBy(u => u.LastName)
             .ToListAsync();
-    }
-
-    private async Task ApproveUserWithRole(ApplicationUser user)
-    {
-        var targetRole = selectedRoles[user.Id];
-
-        user.IsApproved = true;
-        var updateResult = await UserManager.UpdateAsync(user);
-
-        if (updateResult.Succeeded)
-        {
-            if (!await RoleManager.RoleExistsAsync(targetRole))
-            {
-                await RoleManager.CreateAsync(new IdentityRole(targetRole));
-            }
-
-            await UserManager.AddToRoleAsync(user, targetRole);
-
-            successMessage = $"Successfully approved account access for {user.Email} as an '{targetRole}'.";
-            selectedRoles.Remove(user.Id);
-
-            await LoadPendingUsers();
-        }
     }
 }
