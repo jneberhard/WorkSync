@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <Target Name="CopyBlazorRuntimeToPublicPath" AfterTargets="Publish">
-    <Copy SourceFiles="$(PublishDir)wwwroot/_framework/blazor.web.js"
+    <Copy SourceFiles="$(BlazorFrameworkStaticWebAssetRoot)/blazor.web.js"
           DestinationFiles="$(PublishDir)wwwroot/blazor.web.js"
           SkipUnchangedFiles="true" />
   </Target>
