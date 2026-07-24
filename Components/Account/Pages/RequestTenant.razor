@@ -38,17 +38,33 @@
                type="email" maxlength="256" required placeholder="admin@example.com" />
         <label for="adminEmail">Administrator email</label>
     </div>
-    <div class="form-floating mb-3">
-        <input class="form-control" id="password" name="password"
-               type="password" minlength="6" maxlength="100" required
-               autocomplete="new-password" placeholder="Password" />
-        <label for="password">Password</label>
+    <div class="input-group mb-3">
+        <div class="form-floating">
+            <input class="form-control" id="tenant-password" name="password"
+                   type="password" minlength="6" maxlength="100" required
+                   autocomplete="new-password" placeholder="Password" />
+            <label for="tenant-password">Password</label>
+        </div>
+        <button class="btn btn-outline-secondary"
+                type="button"
+                aria-label="Show or hide password"
+                onclick="toggleTenantRequestPassword('tenant-password', this)">
+            <i class="bi bi-eye" aria-hidden="true"></i>
+        </button>
     </div>
-    <div class="form-floating mb-3">
-        <input class="form-control" id="confirmPassword" name="confirmPassword"
-               type="password" minlength="6" maxlength="100" required
-               autocomplete="new-password" placeholder="Confirm password" />
-        <label for="confirmPassword">Confirm password</label>
+    <div class="input-group mb-3">
+        <div class="form-floating">
+            <input class="form-control" id="tenant-confirm-password" name="confirmPassword"
+                   type="password" minlength="6" maxlength="100" required
+                   autocomplete="new-password" placeholder="Confirm password" />
+            <label for="tenant-confirm-password">Confirm password</label>
+        </div>
+        <button class="btn btn-outline-secondary"
+                type="button"
+                aria-label="Show or hide confirmation password"
+                onclick="toggleTenantRequestPassword('tenant-confirm-password', this)">
+            <i class="bi bi-eye" aria-hidden="true"></i>
+        </button>
     </div>
     <button class="btn btn-primary" type="submit">Submit tenant request</button>
 </form>
@@ -57,3 +73,24 @@
     [SupplyParameterFromQuery(Name = "message")]
     private string? Message { get; set; }
 }
+
+<script>
+    function toggleTenantRequestPassword(fieldId, button) {
+        const field = document.getElementById(fieldId);
+        const icon = button?.querySelector('i');
+
+        if (!field) return;
+
+        const showPassword = field.type === 'password';
+        field.type = showPassword ? 'text' : 'password';
+
+        if (icon) {
+            icon.classList.toggle('bi-eye', !showPassword);
+            icon.classList.toggle('bi-eye-slash', showPassword);
+        }
+
+        button?.setAttribute(
+            'aria-label',
+            showPassword ? 'Hide password' : 'Show password');
+    }
+</script>

@@ -102,11 +102,11 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Vercel's static asset layer does not expose the underscore-prefixed
-// /_framework path, so serve the Blazor runtime through an application route.
+// The publish target copies the Blazor runtime outside the underscore-prefixed
+// directory because Vercel does not expose /_framework reliably.
 app.MapGet("/blazor.web.js", (IWebHostEnvironment environment) =>
     Results.File(
-        Path.Combine(environment.WebRootPath, "_framework", "blazor.web.js"),
+        Path.Combine(environment.WebRootPath, "blazor.web.js"),
         "text/javascript; charset=utf-8"));
 
 // Add additional endpoints required by the Identity /Account Razor components.
@@ -203,75 +203,85 @@ app.MapPost("/Account/RequestTenant", async (
 
 app.MapPost("/SuperAdmin/ApproveTenant", async (
     [FromForm] int requestId,
-    ApplicationDbContext db,
-    UserManager<ApplicationUser> userManager) =>
+    IDbContextFactory<ApplicationDbContext> dbFactory) =>
 {
-    var request = await db.TenantRequests.SingleOrDefaultAsync(item => item.Id == requestId);
-    if (request is null || request.IsApproved)
-    {
-        return TenantManagementRedirect("The tenant request was not found.", false);
-    }
+    await using var strategyDb = await dbFactory.CreateDbContextAsync();
+    var strategy = strategyDb.Database.CreateExecutionStrategy();
 
-    var adminUser = await userManager.FindByIdAsync(request.AdminUserId);
-    if (adminUser is null ||
-        !string.Equals(adminUser.Email, request.AdminEmail, StringComparison.OrdinalIgnoreCase))
+    return await strategy.ExecuteAsync<IResult>(async () =>
     {
-        return TenantManagementRedirect(
-            "The pending administrator account is missing. Submit a new tenant request.", false);
-    }
+        await using var db = await dbFactory.CreateDbContextAsync();
 
-    int tenantId;
-    do
-    {
-        tenantId = RandomNumberGenerator.GetInt32(100000, 1000000);
-    }
-    while (await db.Tenants.AnyAsync(tenant => tenant.Id == tenantId));
-
-    await using var transaction = await db.Database.BeginTransactionAsync();
-
-    var tenant = new Tenant
-    {
-        Id = tenantId,
-        Name = request.CompanyName,
-        AdminEmail = request.AdminEmail,
-        IsApproved = true,
-        IsActive = true,
-        ApprovedAtUtc = DateTime.UtcNow
-    };
-    db.Tenants.Add(tenant);
-    await db.SaveChangesAsync();
-
-    adminUser.TenantId = tenantId;
-    adminUser.IsApproved = true;
-    adminUser.EmailConfirmed = true;
-    var updateResult = await userManager.UpdateAsync(adminUser);
-    if (!updateResult.Succeeded)
-    {
-        await transaction.RollbackAsync();
-        return TenantManagementRedirect(
-            string.Join(" ", updateResult.Errors.Select(error => error.Description)), false);
-    }
-
-    if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
-    {
-        var roleResult = await userManager.AddToRoleAsync(adminUser, "Admin");
-        if (!roleResult.Succeeded)
+        var request = await db.TenantRequests
+            .SingleOrDefaultAsync(item => item.Id == requestId);
+        if (request is null || request.IsApproved)
         {
-            await transaction.RollbackAsync();
-            return TenantManagementRedirect(
-                string.Join(" ", roleResult.Errors.Select(error => error.Description)), false);
+            return TenantManagementRedirect("The tenant request was not found.", false);
         }
-    }
 
-    request.IsApproved = true;
-    request.ApprovedAtUtc = DateTime.UtcNow;
-    request.AssignedTenantId = tenantId;
-    await db.SaveChangesAsync();
-    await transaction.CommitAsync();
+        var adminUser = await db.Users
+            .SingleOrDefaultAsync(user => user.Id == request.AdminUserId);
+        if (adminUser is null ||
+            !string.Equals(adminUser.Email, request.AdminEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            return TenantManagementRedirect(
+                "The pending administrator account is missing. Submit a new tenant request.", false);
+        }
 
-    return TenantManagementRedirect(
-        $"Activated {request.CompanyName} with tenant ID {tenantId} and approved {request.AdminEmail} as Admin.",
-        true);
+        var adminRole = await db.Roles
+            .SingleOrDefaultAsync(role => role.NormalizedName == "ADMIN");
+        if (adminRole is null)
+        {
+            return TenantManagementRedirect(
+                "The Admin role is not configured. Tenant approval cannot continue.", false);
+        }
+
+        int tenantId;
+        do
+        {
+            tenantId = RandomNumberGenerator.GetInt32(100000, 1000000);
+        }
+        while (await db.Tenants.AnyAsync(tenant => tenant.Id == tenantId));
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var approvedAtUtc = DateTime.UtcNow;
+
+        db.Tenants.Add(new Tenant
+        {
+            Id = tenantId,
+            Name = request.CompanyName,
+            AdminEmail = request.AdminEmail,
+            IsApproved = true,
+            IsActive = true,
+            ApprovedAtUtc = approvedAtUtc
+        });
+
+        adminUser.TenantId = tenantId;
+        adminUser.IsApproved = true;
+        adminUser.EmailConfirmed = true;
+
+        var hasAdminRole = await db.UserRoles.AnyAsync(userRole =>
+            userRole.UserId == adminUser.Id && userRole.RoleId == adminRole.Id);
+        if (!hasAdminRole)
+        {
+            db.UserRoles.Add(new IdentityUserRole<string>
+            {
+                UserId = adminUser.Id,
+                RoleId = adminRole.Id
+            });
+        }
+
+        request.IsApproved = true;
+        request.ApprovedAtUtc = approvedAtUtc;
+        request.AssignedTenantId = tenantId;
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return TenantManagementRedirect(
+            $"Activated {request.CompanyName} with tenant ID {tenantId} and approved {request.AdminEmail} as Admin.",
+            true);
+    });
 }).RequireAuthorization(policy => policy.RequireRole("SuperUser"));
 
 app.MapPost("/SuperAdmin/SetTenantArchived", async (
@@ -325,7 +335,7 @@ app.MapPost("/SuperAdmin/SetTenantArchived", async (
 app.MapPost("/SuperAdmin/RemoveTenant", async (
     [FromForm] int tenantId,
     [FromForm] string tenantIdConfirmation,
-    ApplicationDbContext db) =>
+    IDbContextFactory<ApplicationDbContext> dbFactory) =>
 {
     if (!int.TryParse(tenantIdConfirmation, out var confirmedTenantId) ||
         confirmedTenantId != tenantId)
@@ -334,28 +344,35 @@ app.MapPost("/SuperAdmin/RemoveTenant", async (
             "Tenant removal was cancelled because the confirmation ID did not match.", false);
     }
 
-    var tenant = await db.Tenants.AsNoTracking()
-        .SingleOrDefaultAsync(item => item.Id == tenantId);
-    if (tenant is null)
+    await using var strategyDb = await dbFactory.CreateDbContextAsync();
+    var strategy = strategyDb.Database.CreateExecutionStrategy();
+
+    return await strategy.ExecuteAsync<IResult>(async () =>
     {
-        return TenantManagementRedirect("The tenant was not found.", false);
-    }
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var tenant = await db.Tenants.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == tenantId);
+        if (tenant is null)
+        {
+            return TenantManagementRedirect("The tenant was not found.", false);
+        }
 
-    await using var transaction = await db.Database.BeginTransactionAsync();
-    await db.Workorders.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
-    await db.Assignments.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
-    await db.FollowUpItems.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
-    await db.Members.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
-    await db.Users.Where(user => user.TenantId == tenantId).ExecuteDeleteAsync();
-    await db.TenantRequests
-        .Where(request => request.AssignedTenantId == tenantId)
-        .ExecuteDeleteAsync();
-    await db.Tenants.Where(item => item.Id == tenantId).ExecuteDeleteAsync();
-    await transaction.CommitAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Workorders.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+        await db.Assignments.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+        await db.FollowUpItems.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+        await db.Members.Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+        await db.Users.Where(user => user.TenantId == tenantId).ExecuteDeleteAsync();
+        await db.TenantRequests
+            .Where(request => request.AssignedTenantId == tenantId)
+            .ExecuteDeleteAsync();
+        await db.Tenants.Where(item => item.Id == tenantId).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
 
-    return TenantManagementRedirect(
-        $"Removed tenant {tenant.Name} ({tenant.Id}) and all of its users and workspace data.",
-        true);
+        return TenantManagementRedirect(
+            $"Removed tenant {tenant.Name} ({tenant.Id}) and all of its users and workspace data.",
+            true);
+    });
 }).RequireAuthorization(policy => policy.RequireRole("SuperUser"));
 
 app.MapPost("/Admin/ApproveUser", async (
