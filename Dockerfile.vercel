@@ -6,6 +6,10 @@ RUN dotnet restore WorkSync.csproj
 
 COPY . ./
 RUN dotnet publish WorkSync.csproj -c Release -o /app/publish --no-restore
+RUN runtime_asset="$(find /root/.nuget/packages/microsoft.aspnetcore.app.internal.assets \
+    -type f -path '*/_framework/blazor.web.js' -print -quit)" \
+    && test -n "$runtime_asset" \
+    && cp "$runtime_asset" /app/publish/wwwroot/blazor.web.js
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app

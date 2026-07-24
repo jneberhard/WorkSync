@@ -16,10 +16,4 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
   </ItemGroup>
 
-  <Target Name="CopyBlazorRuntimeToPublicPath" AfterTargets="Publish">
-    <Copy SourceFiles="$(BlazorFrameworkStaticWebAssetRoot)/blazor.web.js"
-          DestinationFiles="$(PublishDir)wwwroot/blazor.web.js"
-          SkipUnchangedFiles="true" />
-  </Target>
-
 </Project>
